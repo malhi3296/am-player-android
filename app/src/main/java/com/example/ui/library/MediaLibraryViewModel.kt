@@ -14,18 +14,24 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class LibraryTab(val displayName: String) {
-    ALL("All Videos"),
-    FOLDERS("Folders"),
-    FAVORITES("Favorites"),
-    DEMO("Demo Showcase")
+enum class ViewMode {
+    GRID, LIST
+}
+
+enum class SortOption(val displayName: String) {
+    NAME("Name (A to Z)"),
+    DATE("Recently Modified"),
+    SIZE("File Size"),
+    VIDEOS_COUNT("Video Count")
 }
 
 data class LibraryUiState(
-    val selectedTab: LibraryTab = LibraryTab.ALL,
+    val selectedFolder: String? = null,
     val searchQuery: String = "",
     val isScanning: Boolean = false,
-    val selectedFolder: String? = null
+    val viewMode: ViewMode = ViewMode.GRID,
+    val sortOption: SortOption = SortOption.NAME,
+    val hasPermission: Boolean = true
 )
 
 class MediaLibraryViewModel(application: Application) : AndroidViewModel(application) {
@@ -47,18 +53,9 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
     ) { mediaList, state ->
         var list = mediaList
 
-        // Tab filter
-        list = when (state.selectedTab) {
-            LibraryTab.ALL -> list
-            LibraryTab.FOLDERS -> {
-                if (state.selectedFolder != null) {
-                    list.filter { it.folderName == state.selectedFolder }
-                } else {
-                    list
-                }
-            }
-            LibraryTab.FAVORITES -> list.filter { it.isFavorite }
-            LibraryTab.DEMO -> list.filter { it.folderName == "AM Showcase Clips" }
+        // Filter by folder if inside a folder
+        if (state.selectedFolder != null) {
+            list = list.filter { it.folderName == state.selectedFolder }
         }
 
         // Search query filter
@@ -66,7 +63,13 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
             list = list.filter { it.title.contains(state.searchQuery, ignoreCase = true) }
         }
 
-        list
+        // Sorting
+        when (state.sortOption) {
+            SortOption.NAME -> list.sortedBy { it.title.lowercase() }
+            SortOption.DATE -> list.sortedByDescending { it.lastPlayedTimestamp }
+            SortOption.SIZE -> list.sortedByDescending { it.sizeBytes }
+            SortOption.VIDEOS_COUNT -> list
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
     init {
@@ -81,16 +84,27 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun setTab(tab: LibraryTab) {
-        _uiState.update { it.copy(selectedTab = tab, selectedFolder = null) }
-    }
-
     fun setSelectedFolder(folder: String?) {
         _uiState.update { it.copy(selectedFolder = folder) }
     }
 
     fun setSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
+    }
+
+    fun toggleViewMode() {
+        _uiState.update {
+            it.copy(viewMode = if (it.viewMode == ViewMode.GRID) ViewMode.LIST else ViewMode.GRID)
+        }
+    }
+
+    fun setSortOption(option: SortOption) {
+        _uiState.update { it.copy(sortOption = option) }
+    }
+
+    fun setPermissionGranted(granted: Boolean) {
+        _uiState.update { it.copy(hasPermission = granted) }
+        if (granted) rescan()
     }
 
     fun toggleFavorite(item: MediaItemEntity) {

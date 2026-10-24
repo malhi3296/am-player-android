@@ -238,3 +238,144 @@ fun AudioTrackDialog(
         }
     )
 }
+
+@Composable
+fun PlayerSkinDialog(
+    currentSkin: com.example.player.PlayerSkin,
+    onSelectSkin: (com.example.player.PlayerSkin) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text("Player Skins", color = TextPrimary, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(com.example.player.PlayerSkin.values()) { skin ->
+                    val isSelected = skin == currentSkin
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = if (isSelected) skin.cardColor else DarkSurfaceElevated,
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) skin.accentColor else Color(0x33FFFFFF)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelectSkin(skin)
+                                onDismiss()
+                            }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(14.dp)
+                        ) {
+                            Surface(
+                                shape = androidx.compose.foundation.shape.CircleShape,
+                                color = skin.accentColor,
+                                modifier = Modifier.size(24.dp)
+                            ) {}
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = skin.displayName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = if (isSelected) skin.accentColor else Color.White
+                                )
+                                Text(
+                                    text = skin.description,
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFA1A1AA)
+                                )
+                            }
+
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = skin.accentColor
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = currentSkin.accentColor)
+            }
+        }
+    )
+}
+
+@Composable
+fun PlayerMoreOptionsDialog(
+    onOpenSkins: () -> Unit,
+    onSetPointA: () -> Unit,
+    onSetPointB: () -> Unit,
+    onClearLoop: () -> Unit,
+    onCaptureFrame: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Text("Player Tools & Features", color = TextPrimary, fontWeight = FontWeight.Bold)
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = DarkSurfaceElevated,
+                    modifier = Modifier.fillMaxWidth().clickable { onOpenSkins(); onDismiss() }
+                ) {
+                    Text("Change Player Skin / Theme", color = Color.White, modifier = Modifier.padding(14.dp))
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = DarkSurfaceElevated,
+                    modifier = Modifier.fillMaxWidth().clickable { onCaptureFrame(); onDismiss() }
+                ) {
+                    Text("Capture Frame Screenshot (C)", color = Color.White, modifier = Modifier.padding(14.dp))
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = DarkSurfaceElevated,
+                    modifier = Modifier.fillMaxWidth().clickable { onSetPointA(); onDismiss() }
+                ) {
+                    Text("Set A-B Loop: Point A (Start)", color = Color.White, modifier = Modifier.padding(14.dp))
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = DarkSurfaceElevated,
+                    modifier = Modifier.fillMaxWidth().clickable { onSetPointB(); onDismiss() }
+                ) {
+                    Text("Set A-B Loop: Point B (End)", color = Color.White, modifier = Modifier.padding(14.dp))
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = DarkSurfaceElevated,
+                    modifier = Modifier.fillMaxWidth().clickable { onClearLoop(); onDismiss() }
+                ) {
+                    Text("Clear A-B Repeat Loop", color = Color(0xFFFF5252), modifier = Modifier.padding(14.dp))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = CyanNeon)
+            }
+        }
+    )
+}
+

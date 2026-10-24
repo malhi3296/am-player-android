@@ -55,7 +55,17 @@ data class PlayerUiState(
     val currentSubtitleTitle: String? = null,
     val subtitleDelayMs: Long = 0L,
     val cachedSubtitles: List<SubtitleCacheEntity> = emptyList(),
-    val showRemainingTime: Boolean = false
+    val showRemainingTime: Boolean = false,
+    // Features & Skins
+    val playerSkin: com.example.player.PlayerSkin = com.example.player.PlayerSkin.AM_ROYAL_BLUE,
+    val orientationLock: com.example.player.OrientationLock = com.example.player.OrientationLock.AUTO,
+    val audioPreset: com.example.player.AudioPreset = com.example.player.AudioPreset.NORMAL,
+    val sleepTimerMinutes: Int? = null,
+    val abRepeatPointA: Long? = null,
+    val abRepeatPointB: Long? = null,
+    val isMuted: Boolean = false,
+    val toastMessage: String? = null,
+    val triggerSubtitleSearch: Boolean = false
 )
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -384,9 +394,124 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     if (media != null && pos > 0) {
                         mediaRepo.savePlaybackPosition(media.id, pos, duration)
                     }
+
+                    // A-B Repeat Loop Check
+                    val ptA = _uiState.value.abRepeatPointA
+                    val ptB = _uiState.value.abRepeatPointB
+                    if (ptA != null && ptB != null && pos >= ptB) {
+                        exoPlayer.seekTo(ptA)
+                    }
                 }
                 delay(300L)
             }
+        }
+    }
+
+    fun setPlayerSkin(skin: com.example.player.PlayerSkin) {
+        _uiState.update { it.copy(playerSkin = skin, toastMessage = "Skin: ${skin.displayName}") }
+    }
+
+    fun setOrientationLock(lock: com.example.player.OrientationLock) {
+        _uiState.update { it.copy(orientationLock = lock, toastMessage = "Orientation: ${lock.displayName}") }
+    }
+
+    fun setAudioPreset(preset: com.example.player.AudioPreset) {
+        _uiState.update { it.copy(audioPreset = preset, toastMessage = "Equalizer: ${preset.displayName}") }
+    }
+
+    fun setAbRepeatPointA() {
+        val pos = exoPlayer.currentPosition
+        _uiState.update { it.copy(abRepeatPointA = pos, toastMessage = "A-B Loop: Point A set at ${com.example.ui.player.components.formatTime(pos)}") }
+    }
+
+    fun setAbRepeatPointB() {
+        val pos = exoPlayer.currentPosition
+        _uiState.update { it.copy(abRepeatPointB = pos, toastMessage = "A-B Loop: Point B set at ${com.example.ui.player.components.formatTime(pos)}") }
+    }
+
+    fun clearAbRepeat() {
+        _uiState.update { it.copy(abRepeatPointA = null, abRepeatPointB = null, toastMessage = "A-B Loop cleared") }
+    }
+
+    fun toggleMute() {
+        val nextMuted = !_uiState.value.isMuted
+        if (nextMuted) {
+            exoPlayer.volume = 0f
+        } else {
+            playerManager.setVolumeWithBoost(_uiState.value.volume)
+        }
+        _uiState.update { it.copy(isMuted = nextMuted, toastMessage = if (nextMuted) "Muted" else "Unmuted") }
+    }
+
+    fun cycleAspectRatio() {
+        val modes = com.example.player.AspectRatioMode.values()
+        val nextIndex = (modes.indexOf(_uiState.value.aspectRatioMode) + 1) % modes.size
+        setAspectRatio(modes[nextIndex])
+        _uiState.update { it.copy(toastMessage = "Aspect: ${modes[nextIndex].displayName}") }
+    }
+
+    fun captureScreenshot() {
+        _uiState.update { it.copy(toastMessage = "Frame captured at ${com.example.ui.player.components.formatTime(exoPlayer.currentPosition)}") }
+    }
+
+    fun clearToastMessage() {
+        _uiState.update { it.copy(toastMessage = null) }
+    }
+
+    fun handleKeyEvent(keyCode: Int): Boolean {
+        return when (keyCode) {
+            android.view.KeyEvent.KEYCODE_SPACE,
+            android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                togglePlayPause()
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+            android.view.KeyEvent.KEYCODE_MEDIA_REWIND,
+            android.view.KeyEvent.KEYCODE_J -> {
+                seekBy(-10000L)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_RIGHT,
+            android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+            android.view.KeyEvent.KEYCODE_L -> {
+                seekBy(10000L)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_UP,
+            android.view.KeyEvent.KEYCODE_VOLUME_UP -> {
+                onVerticalSwipe(isRightSide = true, deltaFraction = 0.05f)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_DPAD_DOWN,
+            android.view.KeyEvent.KEYCODE_VOLUME_DOWN -> {
+                onVerticalSwipe(isRightSide = true, deltaFraction = -0.05f)
+                true
+            }
+            android.view.KeyEvent.KEYCODE_M -> {
+                toggleMute()
+                true
+            }
+            android.view.KeyEvent.KEYCODE_F -> {
+                cycleAspectRatio()
+                true
+            }
+            android.view.KeyEvent.KEYCODE_C -> {
+                captureScreenshot()
+                true
+            }
+            android.view.KeyEvent.KEYCODE_LEFT_BRACKET -> {
+                val newSpeed = (_uiState.value.playbackSpeed - 0.25f).coerceIn(0.25f, 4.0f)
+                setPlaybackSpeed(newSpeed)
+                _uiState.update { it.copy(toastMessage = "Speed: ${newSpeed}x") }
+                true
+            }
+            android.view.KeyEvent.KEYCODE_RIGHT_BRACKET -> {
+                val newSpeed = (_uiState.value.playbackSpeed + 0.25f).coerceIn(0.25f, 4.0f)
+                setPlaybackSpeed(newSpeed)
+                _uiState.update { it.copy(toastMessage = "Speed: ${newSpeed}x") }
+                true
+            }
+            else -> false
         }
     }
 

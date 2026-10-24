@@ -64,6 +64,9 @@ import com.example.ui.theme.BoostOrange
 import com.example.ui.theme.CyanNeon
 import com.example.ui.theme.PurpleNeon
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.Palette
+
 @Composable
 fun PlayerControlsOverlay(
     uiState: PlayerUiState,
@@ -79,8 +82,11 @@ fun PlayerControlsOverlay(
     onAudioTrackClick: () -> Unit,
     onPipClick: () -> Unit,
     onTimeDisplayClick: () -> Unit,
+    onMoreToolsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val skinAccent = uiState.playerSkin.accentColor
+    val skinSecondary = uiState.playerSkin.secondaryColor
     // If locked, only display the unlock button
     if (uiState.isLocked) {
         AnimatedVisibility(
@@ -226,6 +232,13 @@ fun PlayerControlsOverlay(
                             tint = Color.White
                         )
                     }
+                    IconButton(onClick = onMoreToolsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = "Skins and Tools",
+                            tint = skinAccent
+                        )
+                    }
                     IconButton(onClick = onLockToggle) {
                         Icon(
                             imageVector = Icons.Default.LockOpen,
@@ -312,7 +325,8 @@ fun PlayerControlsOverlay(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
-                    .padding(horizontal = 16.dp, vertical = 20.dp)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 // Time & Duration
                 Row(

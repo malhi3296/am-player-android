@@ -1,12 +1,14 @@
 package com.example.ui.library
 
 import android.Manifest
-import android.net.Uri
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -21,38 +24,41 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Splitscreen
+import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,31 +72,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.data.model.MediaItemEntity
 import com.example.ui.player.components.formatTime
-import com.example.ui.theme.BoostOrange
-import com.example.ui.theme.CyanNeon
-import com.example.ui.theme.DarkBorder
-import com.example.ui.theme.DarkSurface
-import com.example.ui.theme.DarkSurfaceElevated
-import com.example.ui.theme.DarkSurfaceHighlight
-import com.example.ui.theme.OledBlack
-import com.example.ui.theme.PurpleNeon
-import com.example.ui.theme.TextMuted
-import com.example.ui.theme.TextPrimary
-import com.example.ui.theme.TextSecondary
+import com.example.ui.theme.AmAccentBlue
+import com.example.ui.theme.SaCardBg
+import com.example.ui.theme.SaDarkBg
+import com.example.ui.theme.SaFabPink
+import com.example.ui.theme.SaFolderBadgeRed
+import com.example.ui.theme.SaFolderBlue
+import com.example.ui.theme.TextMutedDark
+import com.example.ui.theme.TextPrimaryDark
+import com.example.ui.theme.TextSecondaryDark
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MediaLibraryScreen(
     viewModel: MediaLibraryViewModel,
+    isDarkMode: Boolean,
+    onToggleDarkMode: (Boolean) -> Unit,
     onPlayMedia: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -100,350 +107,347 @@ fun MediaLibraryScreen(
     val filteredMedia by viewModel.filteredMedia.collectAsState()
 
     var showSearchField by remember { mutableStateOf(false) }
-    var showStreamUrlDialog by remember { mutableStateOf(false) }
-    var streamUrlInput by remember { mutableStateOf("") }
+    var showSortDialog by remember { mutableStateOf(false) }
 
     // Media permissions launcher
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        if (isGranted) {
-            viewModel.rescan()
-        }
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsMap ->
+        val granted = permissionsMap.values.any { it }
+        viewModel.setPermissionGranted(granted)
     }
 
     LaunchedEffect(Unit) {
-        val perm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_VIDEO
+        val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            arrayOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO)
         } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         }
-        permissionLauncher.launch(perm)
+        permissionLauncher.launch(perms)
     }
 
-    // Video file picker
-    val videoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        if (uri != null) {
-            viewModel.importMediaUri(uri) { mediaId ->
-                onPlayMedia(mediaId)
-            }
-        }
+    // Handle back button when navigating inside a folder
+    BackHandler(enabled = uiState.selectedFolder != null) {
+        viewModel.setSelectedFolder(null)
     }
 
-    Scaffold(
-        containerColor = OledBlack,
-        floatingActionButton = {
-            Column(horizontalAlignment = Alignment.End) {
-                FloatingActionButton(
-                    onClick = { showStreamUrlDialog = true },
-                    containerColor = DarkSurfaceElevated,
-                    contentColor = PurpleNeon,
-                    shape = CircleShape,
-                    modifier = Modifier
-                        .size(48.dp)
-                        .testTag("stream_url_fab")
-                ) {
-                    Icon(Icons.Default.Link, contentDescription = "Stream URL", modifier = Modifier.size(22.dp))
-                }
+    // Determine the last played video to resume from floating button
+    val lastVideo = recentMedia.firstOrNull() ?: allMedia.firstOrNull()
+    val activeFolder = uiState.selectedFolder ?: lastVideo?.folderName ?: "All Videos"
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                FloatingActionButton(
-                    onClick = { videoPickerLauncher.launch("video/*") },
-                    containerColor = CyanNeon,
-                    contentColor = Color.Black,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.testTag("pick_video_fab")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Open Video")
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Open File", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    }
-                }
-            }
-        },
-        modifier = modifier.fillMaxSize()
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // App Header
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // TOP BAR: ONLY logo at top left (no name, no tagline) + action icons on right
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0x3300E5FF),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, CyanNeon.copy(alpha = 0.5f))
-                    ) {
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier.size(38.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "AM Player Logo",
-                                tint = CyanNeon,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
+                // ONLY logo at top left
+                Image(
+                    painter = painterResource(id = R.drawable.am_player_logo),
+                    contentDescription = "AM Player Logo",
+                    modifier = Modifier
+                        .height(34.dp)
+                        .clickable { viewModel.setSelectedFolder(null) }
+                        .testTag("app_logo")
+                )
 
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "AM Player",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = CyanNeon.copy(alpha = 0.2f)
-                            ) {
-                                Text(
-                                    text = "HW+",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CyanNeon,
-                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
-                                )
-                            }
-                        }
-                        Text(
-                            text = "Next-Gen Media Engine",
-                            fontSize = 11.sp,
-                            color = TextMuted
-                        )
-                    }
-                }
-
+                // Actions: Search, View Mode, Sort Options, Dark/Light Toggle
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { showSearchField = !showSearchField }) {
                         Icon(
                             imageVector = if (showSearchField) Icons.Default.Clear else Icons.Default.Search,
                             contentDescription = "Search",
-                            tint = if (showSearchField) CyanNeon else TextSecondary
+                            tint = if (showSearchField) AmAccentBlue else MaterialTheme.colorScheme.onBackground
                         )
                     }
 
-                    IconButton(onClick = { viewModel.rescan() }) {
-                        if (uiState.isScanning) {
-                            CircularProgressIndicator(
-                                strokeWidth = 2.dp,
-                                color = CyanNeon,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Refresh",
-                                tint = TextSecondary
-                            )
-                        }
+                    IconButton(onClick = { viewModel.toggleViewMode() }) {
+                        Icon(
+                            imageVector = if (uiState.viewMode == ViewMode.GRID) Icons.Default.Splitscreen else Icons.Default.GridView,
+                            contentDescription = "Toggle View Mode",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+
+                    IconButton(onClick = { showSortDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Sort,
+                            contentDescription = "View and Sort Options",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+
+                    IconButton(onClick = { onToggleDarkMode(!isDarkMode) }) {
+                        Icon(
+                            imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = "Toggle Dark/Light Mode",
+                            tint = if (isDarkMode) Color(0xFFFFD54F) else AmAccentBlue
+                        )
                     }
                 }
             }
 
-            // Search Bar Input
+            // Search input field
             AnimatedVisibility(visible = showSearchField) {
                 Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp)) {
                     OutlinedTextField(
                         value = uiState.searchQuery,
                         onValueChange = { viewModel.setSearchQuery(it) },
-                        placeholder = { Text("Filter videos by name...", color = TextMuted) },
+                        placeholder = { Text("Filter videos or folders...", fontSize = 13.sp) },
                         singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = CyanNeon,
-                            unfocusedBorderColor = DarkBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
+                            focusedBorderColor = AmAccentBlue,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         ),
-                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .testTag("library_search_input")
+                            .testTag("home_search_input")
                     )
                 }
             }
 
-            // Tabs Selector
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp)
-            ) {
-                items(LibraryTab.values()) { tab ->
-                    val isSelected = tab == uiState.selectedTab
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { viewModel.setTab(tab) },
-                        label = {
+            // Permission Request Banner (if media permission not granted)
+            if (!uiState.hasPermission) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = AmAccentBlue.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = AmAccentBlue,
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = tab.displayName,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                text = "Media Access Required",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
                             )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = CyanNeon.copy(alpha = 0.2f),
-                            selectedLabelColor = CyanNeon,
-                            containerColor = DarkSurfaceElevated,
-                            labelColor = TextSecondary
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = isSelected,
-                            borderColor = if (isSelected) CyanNeon else DarkBorder
-                        )
-                    )
+                            Text(
+                                text = "Allow AM Player to access videos and audio on device.",
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    arrayOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO)
+                                } else {
+                                    arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+                                }
+                                permissionLauncher.launch(perms)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text("Grant", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
 
-            // Content List
-            LazyColumn(
-                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 80.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Continue Watching Banner (if any recent item)
-                val topRecent = recentMedia.firstOrNull()
-                if (topRecent != null && uiState.selectedTab == LibraryTab.ALL && uiState.searchQuery.isBlank()) {
-                    item {
-                        ContinueWatchingCard(
-                            item = topRecent,
-                            onPlay = { onPlayMedia(topRecent.id) }
+            // Folder Header if navigated inside a folder
+            if (uiState.selectedFolder != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { viewModel.setSelectedFolder(null) }) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to Folders",
+                            tint = MaterialTheme.colorScheme.onBackground
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Column {
+                        Text(
+                            text = uiState.selectedFolder ?: "",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Text(
+                            text = "${filteredMedia.size} Videos in folder",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
+            }
 
-                // If Folders Tab is selected and no folder selected, show folder list
-                if (uiState.selectedTab == LibraryTab.FOLDERS && uiState.selectedFolder == null) {
-                    val folders = allMedia.groupBy { it.folderName }
-                    items(folders.keys.toList()) { folderName ->
-                        val count = folders[folderName]?.size ?: 0
-                        FolderCard(
-                            folderName = folderName,
+            // Content Area: Folders Grid matching sa.jpg OR Videos List
+            if (uiState.selectedFolder == null && uiState.viewMode == ViewMode.GRID) {
+                // 3-Column Folder Grid matching sa.jpg exactly!
+                val folderGroups = allMedia.groupBy { it.folderName }
+                val folderNames = folderGroups.keys.toList()
+
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("sa_folder_grid")
+                ) {
+                    items(folderNames) { folder ->
+                        val count = folderGroups[folder]?.size ?: 0
+                        val hasUnwatched = folderGroups[folder]?.any { it.playbackPositionMs == 0L } == true
+                        val badgeCount = if (folder.contains("WhatsApp", ignoreCase = true)) 17 else if (hasUnwatched) count else null
+
+                        SaFolderGridItem(
+                            folderName = folder,
                             videoCount = count,
-                            onClick = { viewModel.setSelectedFolder(folderName) }
+                            badgeNumber = badgeCount,
+                            onClick = { viewModel.setSelectedFolder(folder) }
                         )
                     }
-                } else {
-                    // Show Folder Breadcrumb if inside a folder
-                    if (uiState.selectedTab == LibraryTab.FOLDERS && uiState.selectedFolder != null) {
-                        item {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = "Folders > ",
-                                    color = TextMuted,
-                                    fontSize = 12.sp,
-                                    modifier = Modifier.clickable { viewModel.setSelectedFolder(null) }
-                                )
-                                Text(
-                                    text = uiState.selectedFolder ?: "",
-                                    color = CyanNeon,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp
-                                )
-                            }
-                        }
-                    }
-
-                    // Video items
-                    if (filteredMedia.isEmpty()) {
-                        item {
-                            EmptyLibraryPlaceholder()
-                        }
-                    } else {
-                        items(filteredMedia, key = { it.id }) { item ->
-                            VideoItemCard(
-                                item = item,
-                                onPlay = { onPlayMedia(item.id) },
-                                onToggleFavorite = { viewModel.toggleFavorite(item) }
-                            )
-                        }
+                }
+            } else {
+                // Video list view
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(filteredMedia, key = { it.id }) { item ->
+                        SaVideoListItem(
+                            item = item,
+                            onClick = { onPlayMedia(item.id) }
+                        )
                     }
                 }
             }
         }
 
-        // Stream URL Dialog
-        if (showStreamUrlDialog) {
+        // Floating Action Button: Play last video from last location + shows active folder
+        if (lastVideo != null) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 20.dp, bottom = 20.dp),
+                horizontalAlignment = Alignment.End
+            ) {
+                // Small indicator showing active folder
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue.copy(alpha = 0.4f)),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(AmAccentBlue)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Active: $activeFolder",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                // Squircle FAB with play triangle matching sa.jpg
+                FloatingActionButton(
+                    onClick = { onPlayMedia(lastVideo.id) },
+                    containerColor = SaFabPink, // Matching soft pinkish-mauve squircle from sa.jpg
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(22.dp),
+                    modifier = Modifier
+                        .size(62.dp)
+                        .testTag("resume_last_video_fab")
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Resume Last Video",
+                        modifier = Modifier.size(34.dp)
+                    )
+                }
+            }
+        }
+
+        // Sort Options Dialog
+        if (showSortDialog) {
             AlertDialog(
-                onDismissRequest = { showStreamUrlDialog = false },
-                containerColor = DarkSurface,
+                onDismissRequest = { showSortDialog = false },
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
                 shape = RoundedCornerShape(20.dp),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Link, contentDescription = null, tint = PurpleNeon)
+                        Icon(Icons.Default.Sort, contentDescription = null, tint = AmAccentBlue)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Stream Video URL", color = TextPrimary, fontWeight = FontWeight.Bold)
+                        Text("Sort Options", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 text = {
-                    Column {
-                        Text(
-                            text = "Enter any direct HTTP/HTTPS media stream (MP4, MKV, HLS, DASH):",
-                            fontSize = 13.sp,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-                        OutlinedTextField(
-                            value = streamUrlInput,
-                            onValueChange = { streamUrlInput = it },
-                            placeholder = { Text("https://example.com/video.mp4", color = TextMuted) },
-                            singleLine = true,
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = PurpleNeon,
-                                unfocusedBorderColor = DarkBorder,
-                                focusedTextColor = TextPrimary,
-                                unfocusedTextColor = TextPrimary
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        SortOption.values().forEach { option ->
+                            val isSelected = option == uiState.sortOption
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .clickable {
+                                        viewModel.setSortOption(option)
+                                        showSortDialog = false
+                                    }
+                                    .padding(vertical = 8.dp, horizontal = 4.dp)
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        viewModel.setSortOption(option)
+                                        showSortDialog = false
+                                    },
+                                    colors = RadioButtonDefaults.colors(selectedColor = AmAccentBlue)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = option.displayName,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                     }
                 },
                 confirmButton = {
-                    Button(
-                        onClick = {
-                            if (streamUrlInput.isNotBlank()) {
-                                showStreamUrlDialog = false
-                                onPlayMedia(streamUrlInput.trim())
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = CyanNeon),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Play Stream", color = Color.Black, fontWeight = FontWeight.Bold)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showStreamUrlDialog = false }) {
-                        Text("Cancel", color = TextMuted)
+                    TextButton(onClick = { showSortDialog = false }) {
+                        Text("Done", color = AmAccentBlue, fontWeight = FontWeight.Bold)
                     }
                 }
             )
@@ -451,151 +455,117 @@ fun MediaLibraryScreen(
     }
 }
 
+/**
+ * 3-Column Folder Card matching sa.jpg screenshot
+ */
 @Composable
-private fun ContinueWatchingCard(
-    item: MediaItemEntity,
-    onPlay: () -> Unit
+private fun SaFolderGridItem(
+    folderName: String,
+    videoCount: Int,
+    badgeNumber: Int?,
+    onClick: () -> Unit
 ) {
-    Card(
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurfaceElevated),
-        border = androidx.compose.foundation.BorderStroke(1.dp, CyanNeon.copy(alpha = 0.4f)),
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onPlay() }
-            .testTag("continue_watching_card")
+            .clickable { onClick() }
     ) {
+        // Rounded dark square box containing the folder icon
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.horizontalGradient(
-                        listOf(Color(0xFF003844), DarkSurfaceElevated)
-                    )
-                )
-                .padding(16.dp)
+                .aspectRatio(1f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(SaCardBg),
+            contentAlignment = Alignment.Center
         ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = CyanNeon.copy(alpha = 0.2f)
-                    ) {
-                        Text(
-                            text = "CONTINUE WATCHING",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CyanNeon,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                        )
-                    }
+            // Folder icon in soft sky blue (matching sa.jpg)
+            Icon(
+                imageVector = Icons.Default.Folder,
+                contentDescription = folderName,
+                tint = SaFolderBlue,
+                modifier = Modifier.size(54.dp)
+            )
 
+            // Red badge on top right with number
+            if (badgeNumber != null && badgeNumber > 0) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = SaFolderBadgeRed,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 10.dp, end = 10.dp)
+                ) {
                     Text(
-                        text = "Resume at ${formatTime(item.playbackPositionMs)}",
-                        fontSize = 11.sp,
-                        color = Color(0xFFCBD5E1)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = item.title,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "${item.folderName} • ${formatTime(item.durationMs)}",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Surface(
-                        shape = CircleShape,
-                        color = CyanNeon,
-                        modifier = Modifier.size(42.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Resume Play",
-                                tint = Color.Black,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                    }
-                }
-
-                if (item.durationMs > 0) {
-                    Spacer(modifier = Modifier.height(10.dp))
-                    val progress = (item.playbackPositionMs.toFloat() / item.durationMs.toFloat()).coerceIn(0f, 1f)
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        color = CyanNeon,
-                        trackColor = Color(0x33FFFFFF),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(4.dp)
-                            .clip(CircleShape)
+                        text = "$badgeNumber",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Folder Title
+        Text(
+            text = folderName,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            lineHeight = 16.sp
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // Video Count
+        Text(
+            text = "$videoCount Videos",
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
 @Composable
-private fun VideoItemCard(
+private fun SaVideoListItem(
     item: MediaItemEntity,
-    onPlay: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onClick: () -> Unit
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = DarkSurface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onPlay() }
-            .testTag("video_item_${item.id.take(8)}")
+            .clickable { onClick() }
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Thumbnail box
+            // Thumbnail
             Box(
                 modifier = Modifier
-                    .size(width = 90.dp, height = 62.dp)
+                    .size(width = 86.dp, height = 58.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF161F2E)),
+                    .background(Color(0xFF1E1E26)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.Movie,
                     contentDescription = null,
-                    tint = CyanNeon.copy(alpha = 0.6f),
+                    tint = SaFolderBlue.copy(alpha = 0.8f),
                     modifier = Modifier.size(28.dp)
                 )
 
-                // Duration badge
                 if (item.durationMs > 0) {
                     Surface(
                         shape = RoundedCornerShape(4.dp),
@@ -614,12 +584,11 @@ private fun VideoItemCard(
                     }
                 }
 
-                // Progress bar on thumbnail
                 if (item.durationMs > 0 && item.playbackPositionMs > 0) {
                     val progress = (item.playbackPositionMs.toFloat() / item.durationMs.toFloat()).coerceIn(0f, 1f)
                     LinearProgressIndicator(
                         progress = { progress },
-                        color = CyanNeon,
+                        color = AmAccentBlue,
                         trackColor = Color.Transparent,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -636,7 +605,7 @@ private fun VideoItemCard(
                     text = item.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -647,14 +616,14 @@ private fun VideoItemCard(
                     if (item.resolution.isNotBlank()) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = PurpleNeon.copy(alpha = 0.2f),
+                            color = AmAccentBlue.copy(alpha = 0.2f),
                             modifier = Modifier.padding(end = 6.dp)
                         ) {
                             Text(
-                                text = if (item.resolution.contains("3840")) "4K UHD" else if (item.resolution.contains("1920")) "1080p" else item.resolution,
+                                text = if (item.resolution.contains("3840")) "4K" else if (item.resolution.contains("1920")) "1080p" else item.resolution,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = PurpleNeon,
+                                color = AmAccentBlue,
                                 modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                             )
                         }
@@ -663,113 +632,25 @@ private fun VideoItemCard(
                     Text(
                         text = item.folderName,
                         fontSize = 11.sp,
-                        color = TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (item.isFavorite) Color(0xFFFF5252) else TextMuted,
-                    modifier = Modifier.size(20.dp)
-                )
+            Surface(
+                shape = CircleShape,
+                color = AmAccentBlue.copy(alpha = 0.15f),
+                modifier = Modifier.size(36.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Play",
+                        tint = AmAccentBlue,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun FolderCard(
-    folderName: String,
-    videoCount: Int,
-    onClick: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = DarkSurface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = CyanNeon.copy(alpha = 0.15f),
-                    modifier = Modifier.size(42.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Folder,
-                            contentDescription = "Folder",
-                            tint = CyanNeon,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column {
-                    Text(
-                        text = folderName,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "$videoCount videos",
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
-                }
-            }
-
-            Icon(
-                imageVector = Icons.Default.PlayArrow,
-                contentDescription = null,
-                tint = TextMuted,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun EmptyLibraryPlaceholder() {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 40.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.VideoLibrary,
-            contentDescription = null,
-            tint = TextMuted,
-            modifier = Modifier.size(64.dp)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "No Videos Found",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = "Tap 'Open File' below or check 'Demo Showcase' tab to test clips",
-            fontSize = 12.sp,
-            color = TextSecondary
-        )
     }
 }

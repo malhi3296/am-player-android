@@ -15,11 +15,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import com.example.ui.library.MediaLibraryScreen
+import androidx.lifecycle.lifecycleScope
+import com.example.ui.MainHomeScreen
 import com.example.ui.library.MediaLibraryViewModel
 import com.example.ui.player.PlayerScreen
 import com.example.ui.player.PlayerViewModel
 import com.example.ui.theme.AMPlayerTheme
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
 
@@ -30,18 +33,25 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        val container = (application as AMPlayerApplication).container
         val intentUri = intent?.data?.toString()
 
+        // Pre-scan music repository
+        lifecycleScope.launch(Dispatchers.IO) {
+            container.musicRepository.rescanAudio()
+        }
+
         setContent {
-            AMPlayerTheme(darkTheme = true) {
-                var currentPlayingUri by remember { mutableStateOf(intentUri) }
+            var isDarkMode by remember { mutableStateOf(true) }
+            var currentPlayingUri by remember { mutableStateOf(intentUri) }
 
-                LaunchedEffect(intentUri) {
-                    if (!intentUri.isNullOrEmpty()) {
-                        currentPlayingUri = intentUri
-                    }
+            LaunchedEffect(intentUri) {
+                if (!intentUri.isNullOrEmpty()) {
+                    currentPlayingUri = intentUri
                 }
+            }
 
+            AMPlayerTheme(darkTheme = isDarkMode) {
                 Crossfade(
                     targetState = currentPlayingUri,
                     label = "screen_transition",
@@ -56,8 +66,11 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     } else {
-                        MediaLibraryScreen(
-                            viewModel = libraryViewModel,
+                        MainHomeScreen(
+                            libraryViewModel = libraryViewModel,
+                            container = container,
+                            isDarkMode = isDarkMode,
+                            onToggleDarkMode = { isDarkMode = it },
                             onPlayMedia = { selectedUri ->
                                 currentPlayingUri = selectedUri
                             }

@@ -133,39 +133,86 @@ class MediaRepository(
     fun getDemoVideoClips(): List<MediaItemEntity> {
         return listOf(
             MediaItemEntity(
+                id = "demo_flex_1",
+                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+                title = "Flex X Cop S02E01.1080p.WEBRip",
+                durationMs = 3600000L,
+                sizeBytes = 1450000000L,
+                resolution = "1920x1080",
+                folderName = "Flex X Cop Season 2",
+                lastPlayedTimestamp = System.currentTimeMillis() - 100000L,
+                playbackPositionMs = 245000L // 4m 05s resume position
+            ),
+            MediaItemEntity(
+                id = "demo_flex_2",
+                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+                title = "Flex X Cop S02E02.1080p.WEBRip",
+                durationMs = 3720000L,
+                sizeBytes = 1520000000L,
+                resolution = "1920x1080",
+                folderName = "Flex X Cop Season 2"
+            ),
+            MediaItemEntity(
+                id = "demo_killers_1",
+                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+                title = "A Shop for Killers S01E01.720p",
+                durationMs = 3120000L,
+                sizeBytes = 950000000L,
+                resolution = "1280x720",
+                folderName = "A Shop for Killers"
+            ),
+            MediaItemEntity(
+                id = "demo_killers_2",
+                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+                title = "A Shop for Killers S01E02.720p",
+                durationMs = 3280000L,
+                sizeBytes = 980000000L,
+                resolution = "1280x720",
+                folderName = "A Shop for Killers"
+            ),
+            MediaItemEntity(
+                id = "demo_levelup_1",
+                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+                title = "Level Up S01 WEB-DL 720p Episode 1",
+                durationMs = 1480000L,
+                sizeBytes = 420000000L,
+                resolution = "1280x720",
+                folderName = "Level Up S01"
+            ),
+            MediaItemEntity(
+                id = "demo_whatsapp_1",
+                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                title = "VID-20241020-WA0014",
+                durationMs = 45000L,
+                sizeBytes = 18000000L,
+                resolution = "1080x1920",
+                folderName = "WhatsApp Video"
+            ),
+            MediaItemEntity(
+                id = "demo_whatsapp_2",
+                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+                title = "VID-20241021-WA0022",
+                durationMs = 62000L,
+                sizeBytes = 22000000L,
+                resolution = "1080x1920",
+                folderName = "WhatsApp Video"
+            ),
+            MediaItemEntity(
+                id = "demo_sadness_1",
+                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
+                title = "Love.In.Sadness.S01E08.720p.HDTV",
+                durationMs = 3400000L,
+                sizeBytes = 870000000L,
+                resolution = "1280x720",
+                folderName = "Love.In.Sadness"
+            ),
+            MediaItemEntity(
                 id = "demo_big_buck_bunny",
                 uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                title = "Big Buck Bunny (4K UltraHD Sample)",
+                title = "Big Buck Bunny (4K UltraHD Master)",
                 durationMs = 596000L,
                 sizeBytes = 158000000L,
                 resolution = "3840x2160",
-                folderName = "AM Showcase Clips"
-            ),
-            MediaItemEntity(
-                id = "demo_tears_of_steel",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                title = "Tears of Steel (Sci-Fi VFX 1080p)",
-                durationMs = 734000L,
-                sizeBytes = 180000000L,
-                resolution = "1920x1080",
-                folderName = "AM Showcase Clips"
-            ),
-            MediaItemEntity(
-                id = "demo_sintel",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-                title = "Sintel (Dragon Fantasy 1080p)",
-                durationMs = 888000L,
-                sizeBytes = 120000000L,
-                resolution = "1920x1080",
-                folderName = "AM Showcase Clips"
-            ),
-            MediaItemEntity(
-                id = "demo_elephants_dream",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-                title = "Elephant's Dream (Open Source Film)",
-                durationMs = 653000L,
-                sizeBytes = 140000000L,
-                resolution = "1920x1080",
                 folderName = "AM Showcase Clips"
             )
         )
