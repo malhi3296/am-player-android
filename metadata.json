@@ -1,0 +1,6 @@
+{
+  "name": "AM Player",
+  "description": "High-performance Android media player with MX and mpvEx gestures, HW+ acceleration, and auto multi-provider subtitle search.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
