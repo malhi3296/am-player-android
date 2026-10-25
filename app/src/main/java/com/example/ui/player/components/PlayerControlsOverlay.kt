@@ -325,17 +325,18 @@ fun PlayerControlsOverlay(
                 }
             }
 
-            // Bottom Bar Controls
+            // Bottom Bar Controls & Prominent Timeline Seekbar
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
-                val isLiveStream = uiState.durationMs <= 0L || (uiState.mediaItem?.folderName?.contains("IPTV") == true)
+                val isStrictLiveStream = (uiState.mediaItem?.folderName?.contains("IPTV", ignoreCase = true) == true ||
+                        uiState.mediaItem?.uri?.contains(".m3u8", ignoreCase = true) == true) && uiState.durationMs <= 0L
 
-                if (isLiveStream) {
+                if (isStrictLiveStream) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -369,42 +370,46 @@ fun PlayerControlsOverlay(
                         }
 
                         Text(
-                            text = "Connected • Low Latency HLS",
+                            text = "Connected • Low Latency Live Stream",
                             fontSize = 12.sp,
                             color = Color(0xFFA1A1AA)
                         )
                     }
                 } else {
-                    // Time & Duration
+                    // Time & Duration Header
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = formatTime(uiState.currentPositionMs),
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
 
                         Text(
-                            text = if (uiState.showRemainingTime) {
-                                val remaining = (uiState.durationMs - uiState.currentPositionMs).coerceAtLeast(0L)
-                                "-${formatTime(remaining)}"
-                            } else {
-                                formatTime(uiState.durationMs)
-                            },
+                            text = if (uiState.durationMs > 0L) {
+                                if (uiState.showRemainingTime) {
+                                    val remaining = (uiState.durationMs - uiState.currentPositionMs).coerceAtLeast(0L)
+                                    "-${formatTime(remaining)}"
+                                } else {
+                                    formatTime(uiState.durationMs)
+                                }
+                            } else "--:--",
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = CyanNeon,
+                            fontWeight = FontWeight.Bold,
+                            color = skinAccent,
                             modifier = Modifier.clickable { onTimeDisplayClick() }
                         )
                     }
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // Custom Seekbar Slider
+                    // Prominent Seekbar Slider
                     var isDragging by remember { mutableStateOf(false) }
                     var dragValue by remember { mutableFloatStateOf(0f) }
 
@@ -422,16 +427,17 @@ fun PlayerControlsOverlay(
                         },
                         onValueChangeFinished = {
                             isDragging = false
-                            val targetMs = (dragValue * uiState.durationMs).toLong()
+                            val targetMs = (dragValue * uiState.durationMs.coerceAtLeast(1L)).toLong()
                             onSeek(targetMs)
                         },
                         colors = SliderDefaults.colors(
-                            thumbColor = CyanNeon,
-                            activeTrackColor = CyanNeon,
+                            thumbColor = skinAccent,
+                            activeTrackColor = skinAccent,
                             inactiveTrackColor = Color(0x66FFFFFF)
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .height(28.dp)
                             .testTag("timeline_slider")
                     )
                 }

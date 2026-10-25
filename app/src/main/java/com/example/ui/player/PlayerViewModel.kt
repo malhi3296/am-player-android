@@ -569,6 +569,29 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun pausePlayback() {
+        exoPlayer.pause()
+        _uiState.update { it.copy(isPlaying = false) }
+    }
+
+    fun stopIfIptvOrExit() {
+        val isIptv = _uiState.value.mediaItem?.folderName?.contains("IPTV", ignoreCase = true) == true ||
+                _uiState.value.mediaItem?.uri?.contains(".m3u", ignoreCase = true) == true ||
+                _uiState.value.mediaItem?.uri?.startsWith("http://", ignoreCase = true) == true ||
+                _uiState.value.mediaItem?.uri?.startsWith("https://", ignoreCase = true) == true ||
+                _uiState.value.mediaItem?.resolution == "Live Stream"
+
+        if (isIptv) {
+            exoPlayer.playWhenReady = false
+            exoPlayer.stop()
+            exoPlayer.clearMediaItems()
+            _uiState.update { it.copy(isPlaying = false, isBuffering = false) }
+        } else {
+            exoPlayer.pause()
+            _uiState.update { it.copy(isPlaying = false) }
+        }
+    }
+
     fun saveResumePosition() {
         val media = _uiState.value.mediaItem ?: return
         val pos = exoPlayer.currentPosition

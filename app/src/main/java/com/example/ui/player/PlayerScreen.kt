@@ -15,6 +15,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
@@ -22,6 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -140,7 +144,7 @@ fun PlayerScreen(
         }
     }
 
-    // Clean up window brightness on exit
+    // Clean up window brightness on exit and stop IPTV from playing in the background
     DisposableEffect(Unit) {
         onDispose {
             activity?.window?.let { window ->
@@ -151,6 +155,14 @@ fun PlayerScreen(
                 insetsController.show(WindowInsetsCompat.Type.systemBars())
             }
             viewModel.saveResumePosition()
+            viewModel.stopIfIptvOrExit()
+        }
+    }
+
+    // Never play IPTV in background when app is paused/stopped unless in active PiP mode
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || activity?.isInPictureInPictureMode != true) {
+            viewModel.stopIfIptvOrExit()
         }
     }
 
@@ -158,6 +170,7 @@ fun PlayerScreen(
         if (uiState.isLocked) {
             viewModel.toggleLock()
         } else {
+            viewModel.stopIfIptvOrExit()
             viewModel.saveResumePosition()
             onNavigateBack()
         }
@@ -242,6 +255,7 @@ fun PlayerScreen(
         PlayerControlsOverlay(
             uiState = uiState,
             onBackClick = {
+                viewModel.stopIfIptvOrExit()
                 viewModel.saveResumePosition()
                 onNavigateBack()
             },
@@ -263,6 +277,26 @@ fun PlayerScreen(
             onTimeDisplayClick = { viewModel.toggleRemainingTime() },
             onMoreToolsClick = { showMoreOptionsDialog = true }
         )
+
+        // Persistent bottom mini seek progress bar when controls are auto-hidden
+        if (!uiState.showControls && uiState.durationMs > 0L) {
+            val progress = (uiState.currentPositionMs.toFloat() / uiState.durationMs.toFloat()).coerceIn(0f, 1f)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomCenter)
+                    .height(4.dp)
+                    .background(Color(0x55000000))
+                    .testTag("player_persistent_progress_bar")
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxSize()
+                        .background(uiState.playerSkin.accentColor)
+                )
+            }
+        }
 
         // Toast feedback HUD
         if (uiState.toastMessage != null) {

@@ -77,7 +77,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import android.content.res.Configuration
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -109,6 +111,9 @@ fun MediaLibraryScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+
     val uiState by viewModel.uiState.collectAsState()
     val allMedia by viewModel.allMedia.collectAsState()
     val recentMedia by viewModel.recentMedia.collectAsState()
@@ -387,12 +392,12 @@ fun MediaLibraryScreen(
                         }
                     }
                 } else if (uiState.viewMode == ViewMode.GRID) {
-                    // 3-Column Folder Grid matching sa.jpg with recent folder highlight
+                    // Folder Grid: 3 columns in portrait, 6 columns in landscape for compact, neat folder cards
                     LazyVerticalGrid(
-                        columns = GridCells.Fixed(3),
+                        columns = if (isLandscape) GridCells.Fixed(6) else GridCells.Fixed(3),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp),
+                        horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 10.dp else 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (isLandscape) 12.dp else 18.dp),
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag("sa_folder_grid")
@@ -400,6 +405,7 @@ fun MediaLibraryScreen(
                         items(folders, key = { it.name }) { folder ->
                             SaFolderGridItem(
                                 folder = folder,
+                                isLandscape = isLandscape,
                                 onClick = { viewModel.setSelectedFolder(folder.name) }
                             )
                         }
@@ -586,6 +592,7 @@ fun MediaLibraryScreen(
 @Composable
 private fun SaFolderGridItem(
     folder: FolderUiModel,
+    isLandscape: Boolean = false,
     onClick: () -> Unit
 ) {
     Column(
@@ -594,21 +601,24 @@ private fun SaFolderGridItem(
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
+        val cornerRadius = if (isLandscape) 12.dp else 20.dp
+        val iconSize = if (isLandscape) 32.dp else 54.dp
+
         // Rounded dark square box containing the folder icon
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(cornerRadius))
                 .background(
                     if (folder.hasRecentVideo) AmAccentBlue.copy(alpha = 0.12f) else SaCardBg
                 )
                 .then(
                     if (folder.hasRecentVideo) {
                         Modifier.border(
-                            1.5.dp,
+                            if (isLandscape) 1.dp else 1.5.dp,
                             AmAccentBlue.copy(alpha = 0.85f),
-                            RoundedCornerShape(20.dp)
+                            RoundedCornerShape(cornerRadius)
                         )
                     } else {
                         Modifier
@@ -621,24 +631,27 @@ private fun SaFolderGridItem(
                 imageVector = Icons.Default.Folder,
                 contentDescription = folder.name,
                 tint = if (folder.hasRecentVideo) AmAccentBlue else SaFolderBlue,
-                modifier = Modifier.size(54.dp)
+                modifier = Modifier.size(iconSize)
             )
 
             // Red badge on top right with number
             if (folder.badgeNumber != null && folder.badgeNumber > 0) {
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RoundedCornerShape(if (isLandscape) 4.dp else 6.dp),
                     color = SaFolderBadgeRed,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 10.dp, end = 10.dp)
+                        .padding(top = if (isLandscape) 6.dp else 10.dp, end = if (isLandscape) 6.dp else 10.dp)
                 ) {
                     Text(
                         text = "${folder.badgeNumber}",
-                        fontSize = 10.sp,
+                        fontSize = if (isLandscape) 9.sp else 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(
+                            horizontal = if (isLandscape) 4.dp else 6.dp,
+                            vertical = if (isLandscape) 1.dp else 2.dp
+                        )
                     )
                 }
             }
@@ -646,26 +659,29 @@ private fun SaFolderGridItem(
             // Subtle "RECENT" pill indicator for folder containing recently played video
             if (folder.hasRecentVideo) {
                 Surface(
-                    shape = RoundedCornerShape(4.dp),
+                    shape = RoundedCornerShape(if (isLandscape) 3.dp else 4.dp),
                     color = AmAccentBlue,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 6.dp)
+                        .padding(bottom = if (isLandscape) 4.dp else 6.dp)
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        modifier = Modifier.padding(
+                            horizontal = if (isLandscape) 4.dp else 6.dp,
+                            vertical = if (isLandscape) 1.dp else 2.dp
+                        ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Default.History,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(9.dp)
+                            modifier = Modifier.size(if (isLandscape) 7.dp else 9.dp)
                         )
-                        Spacer(modifier = Modifier.width(3.dp))
+                        Spacer(modifier = Modifier.width(if (isLandscape) 2.dp else 3.dp))
                         Text(
                             text = "RECENT",
-                            fontSize = 8.sp,
+                            fontSize = if (isLandscape) 7.sp else 8.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )
@@ -674,26 +690,26 @@ private fun SaFolderGridItem(
             }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(if (isLandscape) 4.dp else 8.dp))
 
         // Folder Title
         Text(
             text = folder.name,
-            fontSize = 12.sp,
+            fontSize = if (isLandscape) 11.sp else 12.sp,
             fontWeight = if (folder.hasRecentVideo) FontWeight.Bold else FontWeight.Medium,
             color = if (folder.hasRecentVideo) AmAccentBlue else MaterialTheme.colorScheme.onBackground,
-            maxLines = 2,
+            maxLines = if (isLandscape) 1 else 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            lineHeight = 16.sp
+            lineHeight = if (isLandscape) 13.sp else 16.sp
         )
 
-        Spacer(modifier = Modifier.height(2.dp))
+        Spacer(modifier = Modifier.height(if (isLandscape) 1.dp else 2.dp))
 
         // Video Count
         Text(
             text = "${folder.videoCount} Videos",
-            fontSize = 11.sp,
+            fontSize = if (isLandscape) 10.sp else 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
