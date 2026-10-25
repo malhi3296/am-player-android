@@ -16,6 +16,7 @@ interface AppContainer {
     val musicRepository: MusicRepository
     val iptvRepository: IptvRepository
     val musicPlayerManager: MusicPlayerManager
+    val vaultRepository: com.example.data.repository.VaultRepository
 }
 
 class DefaultAppContainer(private val application: Application) : AppContainer {
@@ -41,6 +42,10 @@ class DefaultAppContainer(private val application: Application) : AppContainer {
 
     override val musicPlayerManager: MusicPlayerManager by lazy {
         MusicPlayerManager(application)
+    }
+
+    override val vaultRepository: com.example.data.repository.VaultRepository by lazy {
+        com.example.data.repository.VaultRepository(application)
     }
 }
 

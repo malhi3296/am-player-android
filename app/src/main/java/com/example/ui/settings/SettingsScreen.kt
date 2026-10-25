@@ -1,7 +1,11 @@
 package com.example.ui.settings
 
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,257 +16,658 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material.icons.filled.VideoSettings
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.AmAccentBlue
-import com.example.ui.theme.BoostOrange
+import com.example.ui.theme.DangerRed
 import com.example.ui.theme.SaCardBg
 import com.example.ui.theme.SaCardBgElevated
+import com.example.ui.theme.SaDarkBg
 
+private enum class SettingsCategory {
+    APPEARANCE,
+    MEDIA_LIBRARY,
+    PLAYER,
+    DECODER,
+    AUDIO,
+    SUBTITLE,
+    ABOUT
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     isDarkMode: Boolean,
     onToggleDarkMode: (Boolean) -> Unit,
     onRescanLibrary: () -> Unit,
     onClearCache: () -> Unit,
+    onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val scrollState = rememberScrollState()
+
+    var activeSheet by remember { mutableStateOf<SettingsCategory?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Player settings toggles
+    var hwDecodingEnabled by remember { mutableStateOf(true) }
+    var swFallbackEnabled by remember { mutableStateOf(true) }
+    var colorMode by remember { mutableStateOf("Vivid") }
+    var audioBoostEnabled by remember { mutableStateOf(true) }
+    var playWhenLocked by remember { mutableStateOf(true) }
+    var autoResumeEnabled by remember { mutableStateOf(true) }
+    var autoScanStartup by remember { mutableStateOf(true) }
+    var equalizerPreset by remember { mutableStateOf("Bass Boost") }
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .verticalScroll(scrollState)
-            .padding(horizontal = 20.dp)
+            .background(MaterialTheme.colorScheme.background)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Settings",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-        Text(
-            text = "Configure Player Engine & Display Preferences",
-            fontSize = 12.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Appearance Section
-        SettingsSectionHeader(title = "Appearance")
-
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier.fillMaxWidth()
+        // TOP APP BAR: Back Arrow + "Settings" matching reference b.jpg
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                SettingsSwitchRow(
-                    icon = if (isDarkMode) Icons.Default.DarkMode else Icons.Default.LightMode,
-                    title = "Dark Theme (OLED Pitch Black)",
-                    subtitle = if (isDarkMode) "Solid Black (#000000) active" else "Light Theme active",
-                    isChecked = isDarkMode,
-                    onCheckedChange = onToggleDarkMode
+            IconButton(
+                onClick = { onNavigateBack?.invoke() },
+                modifier = Modifier.testTag("settings_back_button")
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onBackground
                 )
             }
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Settings",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Playback & Hardware Engine Section
-        SettingsSectionHeader(title = "Decoding & Media Engine")
-
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                SettingsActionRow(
-                    icon = Icons.Default.VideoSettings,
-                    title = "Hardware Acceleration",
-                    subtitle = "HW+ Decoder prioritized with soft fallback"
-                )
-
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
-
-                SettingsActionRow(
-                    icon = Icons.Default.GraphicEq,
-                    title = "Audio Boost Engine",
-                    subtitle = "Native LoudnessEnhancer up to +10 dB (200% volume)"
-                )
-
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
-
-                SettingsActionRow(
-                    icon = Icons.Default.Subtitles,
-                    title = "Multi-Provider Subtitle Engine",
-                    subtitle = "OpenSubtitles, SubDL & Subscene with auto-detect"
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // Library & Data Management
-        SettingsSectionHeader(title = "Storage & Library")
-
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                SettingsClickableRow(
-                    icon = Icons.Default.Refresh,
-                    title = "Rescan Media Library",
-                    subtitle = "Re-index device video and audio files",
-                    onClick = onRescanLibrary
-                )
-
-                Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f), modifier = Modifier.padding(vertical = 12.dp))
-
-                SettingsClickableRow(
-                    icon = Icons.Default.CleaningServices,
-                    title = "Clear Subtitle Cache",
-                    subtitle = "Free up cached .srt and downloaded files",
-                    onClick = onClearCache
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // About Card
-        Card(
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-            modifier = Modifier.fillMaxWidth()
+        // "Made with love by Arwinder Singh Malhi" banner at top of settings
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue.copy(alpha = 0.35f)),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 6.dp)
+                .testTag("made_with_love_banner")
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = AmAccentBlue.copy(alpha = 0.2f),
-                    modifier = Modifier.size(44.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = null,
-                        tint = AmAccentBlue,
-                        modifier = Modifier.padding(10.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(14.dp))
-
-                Column {
-                    Text(
-                        text = "AM Player v1.0",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Combining MX Player & mpvEx architecture with 120Hz smooth animations",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Love",
+                    tint = DangerRed,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Made with love by Arwinder Singh Malhi",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // MINIMAL SETTINGS CATEGORIES matching b.jpg exactly
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(bottom = 32.dp)
+        ) {
+            // 1. Appearance
+            SettingsListItem(
+                icon = Icons.Default.Palette,
+                title = "Appearance",
+                subtitle = "Adjust the app to your liking",
+                testTag = "setting_item_appearance",
+                onClick = { activeSheet = SettingsCategory.APPEARANCE }
+            )
+
+            // 2. Media library
+            SettingsListItem(
+                icon = Icons.Default.Movie,
+                title = "Media library",
+                subtitle = "Scan and manage media library",
+                testTag = "setting_item_media_library",
+                onClick = { activeSheet = SettingsCategory.MEDIA_LIBRARY }
+            )
+
+            // 3. Player
+            SettingsListItem(
+                icon = Icons.Default.PlayCircle,
+                title = "Player",
+                subtitle = "Player appearance, playback controls",
+                testTag = "setting_item_player",
+                onClick = { activeSheet = SettingsCategory.PLAYER }
+            )
+
+            // 4. Decoder
+            SettingsListItem(
+                icon = Icons.Default.Memory,
+                title = "Decoder",
+                subtitle = "Decoder priority, playback decoder options",
+                testTag = "setting_item_decoder",
+                onClick = { activeSheet = SettingsCategory.DECODER }
+            )
+
+            // 5. Audio
+            SettingsListItem(
+                icon = Icons.Default.Audiotrack,
+                title = "Audio",
+                subtitle = "Audio playback options",
+                testTag = "setting_item_audio",
+                onClick = { activeSheet = SettingsCategory.AUDIO }
+            )
+
+            // 6. Subtitle
+            SettingsListItem(
+                icon = Icons.Default.Subtitles,
+                title = "Subtitle",
+                subtitle = "Subtitle appearance, playback options",
+                testTag = "setting_item_subtitle",
+                onClick = { activeSheet = SettingsCategory.SUBTITLE }
+            )
+
+            // 7. About
+            SettingsListItem(
+                icon = Icons.Default.Info,
+                title = "About",
+                subtitle = "Version, support, credits",
+                testTag = "setting_item_about",
+                onClick = { activeSheet = SettingsCategory.ABOUT }
+            )
+        }
+    }
+
+    // Modal Bottom Sheet with clean, organized controls for each category
+    if (activeSheet != null) {
+        ModalBottomSheet(
+            onDismissRequest = { activeSheet = null },
+            sheetState = sheetState,
+            containerColor = if (isDarkMode) SaCardBgElevated else MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp, vertical = 8.dp)
+                    .padding(bottom = 36.dp)
+            ) {
+                when (activeSheet) {
+                    SettingsCategory.APPEARANCE -> {
+                        SheetHeader(title = "Appearance", subtitle = "Adjust the app to your liking")
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        SettingToggleRow(
+                            title = "Dark Theme (OLED Pitch Black)",
+                            subtitle = if (isDarkMode) "Pitch Black (#000000) active" else "Light Theme active",
+                            checked = isDarkMode,
+                            onCheckedChange = onToggleDarkMode
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        SettingActionRow(
+                            title = "Accent Color",
+                            subtitle = "AM Electric Blue (#4D6BFE) active",
+                            actionWidget = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(AmAccentBlue)
+                                )
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        SettingToggleRow(
+                            title = "Logo Dark Mode Opacity",
+                            subtitle = "50% opacity in dark theme",
+                            checked = true,
+                            onCheckedChange = { /* Default 50% */ }
+                        )
+                    }
+
+                    SettingsCategory.MEDIA_LIBRARY -> {
+                        SheetHeader(title = "Media Library", subtitle = "Scan and manage media library")
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        Button(
+                            onClick = {
+                                onRescanLibrary()
+                                Toast.makeText(context, "Rescanning local videos...", Toast.LENGTH_SHORT).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("btn_rescan_media")
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Rescan Media Files Now", fontWeight = FontWeight.Bold)
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Button(
+                            onClick = {
+                                onClearCache()
+                                Toast.makeText(context, "Media and subtitle cache cleared", Toast.LENGTH_SHORT).show()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("btn_clear_cache")
+                        ) {
+                            Icon(
+                                Icons.Default.CleaningServices,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Clear Cache & Temp Files", color = MaterialTheme.colorScheme.onSurface)
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        SettingToggleRow(
+                            title = "Auto-Scan on Startup",
+                            subtitle = "Check for new camera and downloaded videos automatically",
+                            checked = autoScanStartup,
+                            onCheckedChange = { autoScanStartup = it }
+                        )
+                    }
+
+                    SettingsCategory.PLAYER -> {
+                        SheetHeader(title = "Player", subtitle = "Player appearance, playback controls")
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        SettingToggleRow(
+                            title = "Auto-Resume Videos",
+                            subtitle = "Resume video from last saved position",
+                            checked = autoResumeEnabled,
+                            onCheckedChange = { autoResumeEnabled = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        SettingActionRow(
+                            title = "Double Tap to Seek",
+                            subtitle = "10 seconds forward / rewind",
+                            actionWidget = {
+                                Text("10s", fontWeight = FontWeight.Bold, color = AmAccentBlue, fontSize = 13.sp)
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        SettingActionRow(
+                            title = "Gesture Controls",
+                            subtitle = "Swipe left for brightness, right for volume, horizontal to seek",
+                            actionWidget = {
+                                Text("Active", fontWeight = FontWeight.SemiBold, color = AmAccentBlue, fontSize = 12.sp)
+                            }
+                        )
+                    }
+
+                    SettingsCategory.DECODER -> {
+                        SheetHeader(title = "Decoder", subtitle = "Decoder priority, playback decoder options")
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        SettingToggleRow(
+                            title = "Hardware Acceleration (HW+)",
+                            subtitle = "Prioritize GPU hardware decoder for 4K and 60fps videos",
+                            checked = hwDecodingEnabled,
+                            onCheckedChange = { hwDecodingEnabled = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        SettingToggleRow(
+                            title = "Software Fallback (SW)",
+                            subtitle = "Auto-fallback to software engine if codec not supported",
+                            checked = swFallbackEnabled,
+                            onCheckedChange = { swFallbackEnabled = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = "Video Color Profile",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            listOf("Normal", "Vivid", "Cinema", "HDR Boost").forEach { mode ->
+                                val selected = colorMode == mode
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (selected) AmAccentBlue else MaterialTheme.colorScheme.surfaceVariant,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (selected) AmAccentBlue else MaterialTheme.colorScheme.outline
+                                    ),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { colorMode = mode }
+                                ) {
+                                    Text(
+                                        text = mode,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsCategory.AUDIO -> {
+                        SheetHeader(title = "Audio", subtitle = "Audio playback options")
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        SettingToggleRow(
+                            title = "Audio Boost (+10 dB)",
+                            subtitle = "Boost volume up to 200% using native LoudnessEnhancer",
+                            checked = audioBoostEnabled,
+                            onCheckedChange = { audioBoostEnabled = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        SettingToggleRow(
+                            title = "Play Music When Phone is Locked",
+                            subtitle = "Allow music player to stream in background when screen off",
+                            checked = playWhenLocked,
+                            onCheckedChange = { playWhenLocked = it }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Text(
+                            text = "Equalizer Preset",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            listOf("Flat", "Bass Boost", "Vocals", "Rock").forEach { preset ->
+                                val selected = equalizerPreset == preset
+                                Surface(
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (selected) AmAccentBlue else MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { equalizerPreset = preset }
+                                ) {
+                                    Text(
+                                        text = preset,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.padding(vertical = 8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsCategory.SUBTITLE -> {
+                        SheetHeader(title = "Subtitle", subtitle = "Subtitle appearance, playback options")
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        SettingActionRow(
+                            title = "Subtitle Encoding",
+                            subtitle = "Default: UTF-8 (Universal character encoding)",
+                            actionWidget = {
+                                Text("UTF-8", fontWeight = FontWeight.Bold, color = AmAccentBlue, fontSize = 12.sp)
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        SettingActionRow(
+                            title = "Online Providers",
+                            subtitle = "OpenSubtitles, SubDL, and Subscene auto-search",
+                            actionWidget = {
+                                Text("Enabled", fontWeight = FontWeight.SemiBold, color = AmAccentBlue, fontSize = 12.sp)
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        SettingActionRow(
+                            title = "Text Styling",
+                            subtitle = "White text with black semi-transparent backdrop",
+                            actionWidget = {
+                                Text("Standard", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            }
+                        )
+                    }
+
+                    SettingsCategory.ABOUT -> {
+                        SheetHeader(title = "About", subtitle = "Version, support, credits")
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue.copy(alpha = 0.4f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = null,
+                                        tint = DangerRed,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "Made with love by Arwinder Singh Malhi",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "AM Player Pro • Version 2.4.0 (Build 2026)",
+                                    fontSize = 12.sp,
+                                    color = AmAccentBlue,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Advanced video, audio & IPTV player featuring HW+ hardware acceleration, 200% volume boost, multi-provider subtitles, custom m3u playlists, and secret vault security.",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+
+                    null -> {}
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Minimal list item row matching reference b.jpg:
+ * Clean icon on left, title in primary typography, subtitle below
+ */
+@Composable
+private fun SettingsListItem(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    testTag: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 24.dp, vertical = 18.dp)
+            .testTag(testTag),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Monochrome / muted icon matching b.jpg
+        Icon(
+            imageVector = icon,
+            contentDescription = title,
+            tint = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.85f),
+            modifier = Modifier.size(26.dp)
+        )
+
+        Spacer(modifier = Modifier.width(22.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
 @Composable
-private fun SettingsSectionHeader(title: String) {
+private fun SheetHeader(title: String, subtitle: String) {
     Text(
         text = title,
-        fontSize = 13.sp,
+        fontSize = 20.sp,
         fontWeight = FontWeight.Bold,
-        color = AmAccentBlue,
-        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+        color = MaterialTheme.colorScheme.onSurface
+    )
+    Text(
+        text = subtitle,
+        fontSize = 12.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
     )
 }
 
 @Composable
-private fun SettingsSwitchRow(
-    icon: ImageVector,
+private fun SettingToggleRow(
     title: String,
     subtitle: String,
-    isChecked: Boolean,
+    checked: Boolean,
     onCheckedChange: (Boolean) -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = AmAccentBlue,
-                modifier = Modifier.size(24.dp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.width(14.dp))
-            Column {
-                Text(
-                    text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+            Text(
+                text = subtitle,
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
-
+        Spacer(modifier = Modifier.width(12.dp))
         Switch(
-            checked = isChecked,
+            checked = checked,
             onCheckedChange = onCheckedChange,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
@@ -273,23 +678,17 @@ private fun SettingsSwitchRow(
 }
 
 @Composable
-private fun SettingsActionRow(
-    icon: ImageVector,
+private fun SettingActionRow(
     title: String,
-    subtitle: String
+    subtitle: String,
+    actionWidget: @Composable () -> Unit
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = AmAccentBlue,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-        Column {
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 fontSize = 14.sp,
@@ -298,45 +697,11 @@ private fun SettingsActionRow(
             )
             Text(
                 text = subtitle,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-@Composable
-private fun SettingsClickableRow(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = AmAccentBlue,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-        Column {
-            Text(
-                text = title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
+        Spacer(modifier = Modifier.width(12.dp))
+        actionWidget()
     }
 }

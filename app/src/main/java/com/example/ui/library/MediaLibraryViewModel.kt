@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.AMPlayerApplication
 import com.example.data.model.MediaItemEntity
+import com.example.data.repository.VaultRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,6 +26,15 @@ enum class SortOption(val displayName: String) {
     VIDEOS_COUNT("Video Count")
 }
 
+data class FolderUiModel(
+    val name: String,
+    val videoCount: Int,
+    val totalSizeBytes: Long,
+    val latestTimestamp: Long,
+    val hasRecentVideo: Boolean,
+    val badgeNumber: Int?
+)
+
 data class LibraryUiState(
     val selectedFolder: String? = null,
     val searchQuery: String = "",
@@ -36,17 +46,86 @@ data class LibraryUiState(
 
 class MediaLibraryViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val mediaRepo = (application as AMPlayerApplication).container.mediaRepository
+    private val container = (application as AMPlayerApplication).container
+    private val mediaRepo = container.mediaRepository
+    val vaultRepository: VaultRepository = container.vaultRepository
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState
 
-    val allMedia: StateFlow<List<MediaItemEntity>> = mediaRepo.allMedia
+    // All raw media including hidden items (used by vault)
+    val allRawMedia: StateFlow<List<MediaItemEntity>> = mediaRepo.allMedia
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
-    val recentMedia: StateFlow<List<MediaItemEntity>> = mediaRepo.recentMedia
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+    // All public media (hidden videos excluded)
+    val allMedia: StateFlow<List<MediaItemEntity>> = combine(
+        allRawMedia,
+        vaultRepository.hiddenVideoIds
+    ) { mediaList, hiddenIds ->
+        mediaList.filter { !hiddenIds.contains(it.id) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
+    val recentMedia: StateFlow<List<MediaItemEntity>> = combine(
+        mediaRepo.recentMedia,
+        vaultRepository.hiddenVideoIds
+    ) { recentList, hiddenIds ->
+        recentList.filter { !hiddenIds.contains(it.id) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+
+    // Reactive Folders list with Search and Sorting applied!
+    val folders: StateFlow<List<FolderUiModel>> = combine(
+        allMedia,
+        recentMedia,
+        _uiState
+    ) { mediaList, recentList, state ->
+        val query = state.searchQuery.trim()
+        val mostRecentVideo = recentList.firstOrNull()
+
+        // 1. Group by folder name
+        val grouped = mediaList.groupBy { it.folderName }
+
+        val folderModels = grouped.map { (folderName, videos) ->
+            val count = videos.size
+            val totalSize = videos.sumOf { it.sizeBytes }
+            val latestTime = videos.maxOfOrNull { it.lastPlayedTimestamp } ?: 0L
+            val hasRecent = mostRecentVideo != null && mostRecentVideo.folderName == folderName
+            val hasUnwatched = videos.any { it.playbackPositionMs == 0L }
+            val badge = if (folderName.contains("WhatsApp", ignoreCase = true)) 17 else if (hasUnwatched) count else null
+
+            FolderUiModel(
+                name = folderName,
+                videoCount = count,
+                totalSizeBytes = totalSize,
+                latestTimestamp = latestTime,
+                hasRecentVideo = hasRecent,
+                badgeNumber = badge
+            )
+        }
+
+        // 2. Filter by search query (folder matches name OR contains video matching title)
+        val filtered = if (query.isNotBlank()) {
+            folderModels.filter { folder ->
+                folder.name.contains(query, ignoreCase = true) ||
+                    (grouped[folder.name]?.any { it.title.contains(query, ignoreCase = true) } == true)
+            }
+        } else {
+            folderModels
+        }
+
+        // 3. Sort folders according to chosen SortOption
+        when (state.sortOption) {
+            SortOption.NAME -> filtered.sortedBy { it.name.lowercase() }
+            SortOption.DATE -> filtered.sortedWith(
+                // Put recently played video folder first, then sort by latest timestamp descending
+                compareByDescending<FolderUiModel> { it.hasRecentVideo }
+                    .thenByDescending { it.latestTimestamp }
+            )
+            SortOption.SIZE -> filtered.sortedByDescending { it.totalSizeBytes }
+            SortOption.VIDEOS_COUNT -> filtered.sortedByDescending { it.videoCount }
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
+
+    // Filtered videos when inside a folder or searching
     val filteredMedia: StateFlow<List<MediaItemEntity>> = combine(
         allMedia,
         _uiState
@@ -68,7 +147,7 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
             SortOption.NAME -> list.sortedBy { it.title.lowercase() }
             SortOption.DATE -> list.sortedByDescending { it.lastPlayedTimestamp }
             SortOption.SIZE -> list.sortedByDescending { it.sizeBytes }
-            SortOption.VIDEOS_COUNT -> list
+            SortOption.VIDEOS_COUNT -> list.sortedByDescending { it.durationMs }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 

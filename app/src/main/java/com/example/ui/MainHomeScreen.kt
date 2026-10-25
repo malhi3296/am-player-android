@@ -143,11 +143,17 @@ fun MainHomeScreen(
                             },
                             onClearCache = {
                                 // Cache clean
+                            },
+                            onNavigateBack = {
+                                currentTab = BottomNavTab.HOME
                             }
                         )
                     }
                 }
             }
+        }
+        androidx.activity.compose.BackHandler(enabled = currentTab != BottomNavTab.HOME) {
+            currentTab = BottomNavTab.HOME
         }
     }
 }
