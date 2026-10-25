@@ -163,9 +163,22 @@ class MusicPlayerManager(private val context: Context) {
 
     fun playTrack(track: AudioTrack, trackList: List<AudioTrack>) {
         val player = getOrCreatePlayer()
-        playlist.clear()
-        playlist.addAll(trackList)
+        if (playlist != trackList) {
+            playlist.clear()
+            playlist.addAll(trackList)
+        }
         currentIndex = playlist.indexOfFirst { it.id == track.id }.coerceAtLeast(0)
+
+        // Instant optimistic state update for 0ms UI latency
+        _state.update {
+            it.copy(
+                currentTrack = track,
+                isPlaying = true,
+                currentPositionMs = 0L,
+                durationMs = track.durationMs,
+                playlist = playlist
+            )
+        }
 
         val metadata = MediaMetadata.Builder()
             .setTitle(track.title)
@@ -180,35 +193,33 @@ class MusicPlayerManager(private val context: Context) {
 
         player.setMediaItem(mediaItem)
         player.prepare()
-        player.playWhenReady = true
-
-        _state.update {
-            it.copy(
-                currentTrack = track,
-                currentPositionMs = 0L,
-                durationMs = track.durationMs,
-                playlist = trackList
-            )
-        }
+        player.play()
     }
 
     fun togglePlayPause() {
-        val player = exoPlayer ?: return
-        if (player.isPlaying) {
-            player.pause()
-        } else {
+        val player = exoPlayer
+        if (player == null) {
+            val track = _state.value.currentTrack ?: playlist.firstOrNull() ?: return
+            playTrack(track, playlist)
+            return
+        }
+        val willPlay = !player.isPlaying
+        _state.update { it.copy(isPlaying = willPlay) }
+        if (willPlay) {
             player.play()
+        } else {
+            player.pause()
         }
     }
 
     fun seekTo(positionMs: Long) {
-        exoPlayer?.seekTo(positionMs)
         _state.update { it.copy(currentPositionMs = positionMs) }
+        exoPlayer?.seekTo(positionMs)
     }
 
     fun seekBy(offsetMs: Long) {
-        val current = exoPlayer?.currentPosition ?: 0L
-        val dur = exoPlayer?.duration?.coerceAtLeast(0L) ?: 0L
+        val current = _state.value.currentPositionMs
+        val dur = _state.value.durationMs
         val target = (current + offsetMs).coerceIn(0L, dur)
         seekTo(target)
     }
@@ -220,13 +231,33 @@ class MusicPlayerManager(private val context: Context) {
         } else {
             (currentIndex + 1) % playlist.size
         }
-        playTrack(playlist[nextIdx], playlist)
+        val nextTrack = playlist[nextIdx]
+        currentIndex = nextIdx
+        _state.update {
+            it.copy(
+                currentTrack = nextTrack,
+                isPlaying = true,
+                currentPositionMs = 0L,
+                durationMs = nextTrack.durationMs
+            )
+        }
+        playTrack(nextTrack, playlist)
     }
 
     fun previous() {
         if (playlist.isEmpty()) return
         val prevIdx = if (currentIndex > 0) currentIndex - 1 else playlist.size - 1
-        playTrack(playlist[prevIdx], playlist)
+        val prevTrack = playlist[prevIdx]
+        currentIndex = prevIdx
+        _state.update {
+            it.copy(
+                currentTrack = prevTrack,
+                isPlaying = true,
+                currentPositionMs = 0L,
+                durationMs = prevTrack.durationMs
+            )
+        }
+        playTrack(prevTrack, playlist)
     }
 
     fun toggleShuffle() {

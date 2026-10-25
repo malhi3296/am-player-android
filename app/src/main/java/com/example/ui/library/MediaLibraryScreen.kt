@@ -247,27 +247,6 @@ fun MediaLibraryScreen(
                             tint = if (isDarkMode) Color(0xFFFFD54F) else AmAccentBlue
                         )
                     }
-
-                    // Top-right AM Player Logo with 5-tap Secret Vault unlock
-                    Box(
-                        modifier = Modifier
-                            .padding(start = 4.dp)
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(if (isDarkMode) Color(0xFF1E1E26) else Color(0xFFE8EEF8))
-                            .clickable { onLogoClick() }
-                            .testTag("top_right_logo"),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.am_player_logo),
-                            contentDescription = "AM Logo",
-                            colorFilter = if (isDarkMode) ColorFilter.tint(Color.White) else null,
-                            modifier = Modifier
-                                .size(24.dp)
-                                .then(if (isDarkMode) Modifier.alpha(0.5f) else Modifier)
-                        )
-                    }
                 }
             }
 

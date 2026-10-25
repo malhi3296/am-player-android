@@ -20,10 +20,14 @@ enum class ViewMode {
 }
 
 enum class SortOption(val displayName: String) {
-    NAME("Name (A to Z)"),
-    DATE("Recently Modified"),
-    SIZE("File Size"),
-    VIDEOS_COUNT("Video Count")
+    NAME_ASC("Name (A to Z)"),
+    NAME_DESC("Name (Z to A)"),
+    DATE_DESC("Date (Newest First)"),
+    DATE_ASC("Date (Oldest First)"),
+    SIZE_DESC("File Size (Largest First)"),
+    SIZE_ASC("File Size (Smallest First)"),
+    VIDEOS_COUNT_DESC("Video Count (Most Videos)"),
+    VIDEOS_COUNT_ASC("Video Count (Fewest Videos)")
 }
 
 data class FolderUiModel(
@@ -40,7 +44,7 @@ data class LibraryUiState(
     val searchQuery: String = "",
     val isScanning: Boolean = false,
     val viewMode: ViewMode = ViewMode.GRID,
-    val sortOption: SortOption = SortOption.NAME,
+    val sortOption: SortOption = SortOption.NAME_ASC,
     val hasPermission: Boolean = true
 )
 
@@ -114,14 +118,14 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
 
         // 3. Sort folders according to chosen SortOption
         when (state.sortOption) {
-            SortOption.NAME -> filtered.sortedBy { it.name.lowercase() }
-            SortOption.DATE -> filtered.sortedWith(
-                // Put recently played video folder first, then sort by latest timestamp descending
-                compareByDescending<FolderUiModel> { it.hasRecentVideo }
-                    .thenByDescending { it.latestTimestamp }
-            )
-            SortOption.SIZE -> filtered.sortedByDescending { it.totalSizeBytes }
-            SortOption.VIDEOS_COUNT -> filtered.sortedByDescending { it.videoCount }
+            SortOption.NAME_ASC -> filtered.sortedBy { it.name.lowercase() }
+            SortOption.NAME_DESC -> filtered.sortedByDescending { it.name.lowercase() }
+            SortOption.DATE_DESC -> filtered.sortedByDescending { it.latestTimestamp }
+            SortOption.DATE_ASC -> filtered.sortedBy { it.latestTimestamp }
+            SortOption.SIZE_DESC -> filtered.sortedByDescending { it.totalSizeBytes }
+            SortOption.SIZE_ASC -> filtered.sortedBy { it.totalSizeBytes }
+            SortOption.VIDEOS_COUNT_DESC -> filtered.sortedByDescending { it.videoCount }
+            SortOption.VIDEOS_COUNT_ASC -> filtered.sortedBy { it.videoCount }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
@@ -144,10 +148,14 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
 
         // Sorting
         when (state.sortOption) {
-            SortOption.NAME -> list.sortedBy { it.title.lowercase() }
-            SortOption.DATE -> list.sortedByDescending { it.lastPlayedTimestamp }
-            SortOption.SIZE -> list.sortedByDescending { it.sizeBytes }
-            SortOption.VIDEOS_COUNT -> list.sortedByDescending { it.durationMs }
+            SortOption.NAME_ASC -> list.sortedBy { it.title.lowercase() }
+            SortOption.NAME_DESC -> list.sortedByDescending { it.title.lowercase() }
+            SortOption.DATE_DESC -> list.sortedByDescending { it.lastPlayedTimestamp }
+            SortOption.DATE_ASC -> list.sortedBy { it.lastPlayedTimestamp }
+            SortOption.SIZE_DESC -> list.sortedByDescending { it.sizeBytes }
+            SortOption.SIZE_ASC -> list.sortedBy { it.sizeBytes }
+            SortOption.VIDEOS_COUNT_DESC -> list.sortedByDescending { it.durationMs }
+            SortOption.VIDEOS_COUNT_ASC -> list.sortedBy { it.durationMs }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 

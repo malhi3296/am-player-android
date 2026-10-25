@@ -136,7 +136,8 @@ fun MainHomeScreen(
                     }
                     BottomNavTab.SETTINGS -> {
                         SettingsScreen(
-                            isDarkMode = isDarkMode,
+                            settingsRepository = container.settingsRepository,
+                            musicPlayerManager = container.musicPlayerManager,
                             onToggleDarkMode = onToggleDarkMode,
                             onRescanLibrary = {
                                 libraryViewModel.rescan()

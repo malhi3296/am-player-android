@@ -131,6 +131,7 @@ class MediaRepository(
     }
 
     fun getDemoVideoClips(): List<MediaItemEntity> {
+        val now = System.currentTimeMillis()
         return listOf(
             MediaItemEntity(
                 id = "demo_flex_1",
@@ -140,7 +141,7 @@ class MediaRepository(
                 sizeBytes = 1450000000L,
                 resolution = "1920x1080",
                 folderName = "Flex X Cop Season 2",
-                lastPlayedTimestamp = System.currentTimeMillis() - 100000L,
+                lastPlayedTimestamp = now - 60000L,
                 playbackPositionMs = 245000L // 4m 05s resume position
             ),
             MediaItemEntity(
@@ -150,7 +151,8 @@ class MediaRepository(
                 durationMs = 3720000L,
                 sizeBytes = 1520000000L,
                 resolution = "1920x1080",
-                folderName = "Flex X Cop Season 2"
+                folderName = "Flex X Cop Season 2",
+                lastPlayedTimestamp = now - 120000L
             ),
             MediaItemEntity(
                 id = "demo_killers_1",
@@ -159,7 +161,8 @@ class MediaRepository(
                 durationMs = 3120000L,
                 sizeBytes = 950000000L,
                 resolution = "1280x720",
-                folderName = "A Shop for Killers"
+                folderName = "A Shop for Killers",
+                lastPlayedTimestamp = now - 3600000L
             ),
             MediaItemEntity(
                 id = "demo_killers_2",
@@ -168,7 +171,8 @@ class MediaRepository(
                 durationMs = 3280000L,
                 sizeBytes = 980000000L,
                 resolution = "1280x720",
-                folderName = "A Shop for Killers"
+                folderName = "A Shop for Killers",
+                lastPlayedTimestamp = now - 7200000L
             ),
             MediaItemEntity(
                 id = "demo_levelup_1",
@@ -177,7 +181,8 @@ class MediaRepository(
                 durationMs = 1480000L,
                 sizeBytes = 420000000L,
                 resolution = "1280x720",
-                folderName = "Level Up S01"
+                folderName = "Level Up S01",
+                lastPlayedTimestamp = now - 86400000L
             ),
             MediaItemEntity(
                 id = "demo_whatsapp_1",
@@ -186,7 +191,8 @@ class MediaRepository(
                 durationMs = 45000L,
                 sizeBytes = 18000000L,
                 resolution = "1080x1920",
-                folderName = "WhatsApp Video"
+                folderName = "WhatsApp Video",
+                lastPlayedTimestamp = now - 1800000L
             ),
             MediaItemEntity(
                 id = "demo_whatsapp_2",
@@ -195,7 +201,8 @@ class MediaRepository(
                 durationMs = 62000L,
                 sizeBytes = 22000000L,
                 resolution = "1080x1920",
-                folderName = "WhatsApp Video"
+                folderName = "WhatsApp Video",
+                lastPlayedTimestamp = now - 2400000L
             ),
             MediaItemEntity(
                 id = "demo_sadness_1",
@@ -204,7 +211,8 @@ class MediaRepository(
                 durationMs = 3400000L,
                 sizeBytes = 870000000L,
                 resolution = "1280x720",
-                folderName = "Love.In.Sadness"
+                folderName = "Love.In.Sadness",
+                lastPlayedTimestamp = now - 172800000L
             ),
             MediaItemEntity(
                 id = "demo_big_buck_bunny",
@@ -213,7 +221,8 @@ class MediaRepository(
                 durationMs = 596000L,
                 sizeBytes = 158000000L,
                 resolution = "3840x2160",
-                folderName = "AM Showcase Clips"
+                folderName = "AM Showcase Clips",
+                lastPlayedTimestamp = now - 259200000L
             )
         )
     }

@@ -1,7 +1,6 @@
 package com.example.ui.settings
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,35 +22,32 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.CleaningServices
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.VideoSettings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,11 +63,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.repository.SettingsRepository
+import com.example.player.MusicPlayerManager
 import com.example.ui.theme.AmAccentBlue
 import com.example.ui.theme.DangerRed
-import com.example.ui.theme.SaCardBg
 import com.example.ui.theme.SaCardBgElevated
-import com.example.ui.theme.SaDarkBg
 
 private enum class SettingsCategory {
     APPEARANCE,
@@ -86,7 +82,8 @@ private enum class SettingsCategory {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    isDarkMode: Boolean,
+    settingsRepository: SettingsRepository,
+    musicPlayerManager: MusicPlayerManager? = null,
     onToggleDarkMode: (Boolean) -> Unit,
     onRescanLibrary: () -> Unit,
     onClearCache: () -> Unit,
@@ -96,18 +93,14 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scrollState = rememberScrollState()
 
+    val settings by settingsRepository.settings.collectAsState()
     var activeSheet by remember { mutableStateOf<SettingsCategory?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    // Player settings toggles
-    var hwDecodingEnabled by remember { mutableStateOf(true) }
-    var swFallbackEnabled by remember { mutableStateOf(true) }
-    var colorMode by remember { mutableStateOf("Vivid") }
-    var audioBoostEnabled by remember { mutableStateOf(true) }
-    var playWhenLocked by remember { mutableStateOf(true) }
-    var autoResumeEnabled by remember { mutableStateOf(true) }
-    var autoScanStartup by remember { mutableStateOf(true) }
-    var equalizerPreset by remember { mutableStateOf("Bass Boost") }
+    // Dialog states for options
+    var showSeekDialog by remember { mutableStateOf(false) }
+    var showEncodingDialog by remember { mutableStateOf(false) }
+    var showSubtitleSizeDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = modifier
@@ -249,7 +242,7 @@ fun SettingsScreen(
         ModalBottomSheet(
             onDismissRequest = { activeSheet = null },
             sheetState = sheetState,
-            containerColor = if (isDarkMode) SaCardBgElevated else MaterialTheme.colorScheme.surface,
+            containerColor = if (settings.isDarkMode) SaCardBgElevated else MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             Column(
@@ -265,9 +258,12 @@ fun SettingsScreen(
 
                         SettingToggleRow(
                             title = "Dark Theme (OLED Pitch Black)",
-                            subtitle = if (isDarkMode) "Pitch Black (#000000) active" else "Light Theme active",
-                            checked = isDarkMode,
-                            onCheckedChange = onToggleDarkMode
+                            subtitle = if (settings.isDarkMode) "Pitch Black (#000000) active" else "Light Theme active",
+                            checked = settings.isDarkMode,
+                            onCheckedChange = {
+                                settingsRepository.setDarkMode(it)
+                                onToggleDarkMode(it)
+                            }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -287,11 +283,12 @@ fun SettingsScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        SettingToggleRow(
+                        SettingActionRow(
                             title = "Logo Dark Mode Opacity",
                             subtitle = "50% opacity in dark theme",
-                            checked = true,
-                            onCheckedChange = { /* Default 50% */ }
+                            actionWidget = {
+                                Text("50%", fontWeight = FontWeight.Bold, color = AmAccentBlue, fontSize = 13.sp)
+                            }
                         )
                     }
 
@@ -320,7 +317,7 @@ fun SettingsScreen(
                         Button(
                             onClick = {
                                 onClearCache()
-                                Toast.makeText(context, "Media and subtitle cache cleared", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Media and subtitle cache cleared (0 KB cached)", Toast.LENGTH_SHORT).show()
                             },
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             shape = RoundedCornerShape(12.dp),
@@ -343,8 +340,8 @@ fun SettingsScreen(
                         SettingToggleRow(
                             title = "Auto-Scan on Startup",
                             subtitle = "Check for new camera and downloaded videos automatically",
-                            checked = autoScanStartup,
-                            onCheckedChange = { autoScanStartup = it }
+                            checked = settings.autoScanStartup,
+                            onCheckedChange = { settingsRepository.setAutoScanStartup(it) }
                         )
                     }
 
@@ -355,18 +352,24 @@ fun SettingsScreen(
                         SettingToggleRow(
                             title = "Auto-Resume Videos",
                             subtitle = "Resume video from last saved position",
-                            checked = autoResumeEnabled,
-                            onCheckedChange = { autoResumeEnabled = it }
+                            checked = settings.autoResumeEnabled,
+                            onCheckedChange = { settingsRepository.setAutoResume(it) }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
 
                         SettingActionRow(
                             title = "Double Tap to Seek",
-                            subtitle = "10 seconds forward / rewind",
+                            subtitle = "${settings.seekDurationSeconds} seconds forward / rewind (Tap to change)",
                             actionWidget = {
-                                Text("10s", fontWeight = FontWeight.Bold, color = AmAccentBlue, fontSize = 13.sp)
-                            }
+                                Text(
+                                    text = "${settings.seekDurationSeconds}s",
+                                    fontWeight = FontWeight.Bold,
+                                    color = AmAccentBlue,
+                                    fontSize = 13.sp
+                                )
+                            },
+                            onClick = { showSeekDialog = true }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -387,8 +390,8 @@ fun SettingsScreen(
                         SettingToggleRow(
                             title = "Hardware Acceleration (HW+)",
                             subtitle = "Prioritize GPU hardware decoder for 4K and 60fps videos",
-                            checked = hwDecodingEnabled,
-                            onCheckedChange = { hwDecodingEnabled = it }
+                            checked = settings.hwDecodingEnabled,
+                            onCheckedChange = { settingsRepository.setHwDecoding(it) }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -396,8 +399,8 @@ fun SettingsScreen(
                         SettingToggleRow(
                             title = "Software Fallback (SW)",
                             subtitle = "Auto-fallback to software engine if codec not supported",
-                            checked = swFallbackEnabled,
-                            onCheckedChange = { swFallbackEnabled = it }
+                            checked = settings.swFallbackEnabled,
+                            onCheckedChange = { settingsRepository.setSwFallback(it) }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -414,7 +417,7 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             listOf("Normal", "Vivid", "Cinema", "HDR Boost").forEach { mode ->
-                                val selected = colorMode == mode
+                                val selected = settings.colorMode == mode
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = if (selected) AmAccentBlue else MaterialTheme.colorScheme.surfaceVariant,
@@ -424,7 +427,7 @@ fun SettingsScreen(
                                     ),
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { colorMode = mode }
+                                        .clickable { settingsRepository.setColorMode(mode) }
                                 ) {
                                     Text(
                                         text = mode,
@@ -446,8 +449,8 @@ fun SettingsScreen(
                         SettingToggleRow(
                             title = "Audio Boost (+10 dB)",
                             subtitle = "Boost volume up to 200% using native LoudnessEnhancer",
-                            checked = audioBoostEnabled,
-                            onCheckedChange = { audioBoostEnabled = it }
+                            checked = settings.audioBoostEnabled,
+                            onCheckedChange = { settingsRepository.setAudioBoost(it) }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -455,8 +458,8 @@ fun SettingsScreen(
                         SettingToggleRow(
                             title = "Play Music When Phone is Locked",
                             subtitle = "Allow music player to stream in background when screen off",
-                            checked = playWhenLocked,
-                            onCheckedChange = { playWhenLocked = it }
+                            checked = settings.playWhenLocked,
+                            onCheckedChange = { settingsRepository.setPlayWhenLocked(it) }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
@@ -473,13 +476,16 @@ fun SettingsScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             listOf("Flat", "Bass Boost", "Vocals", "Rock").forEach { preset ->
-                                val selected = equalizerPreset == preset
+                                val selected = settings.equalizerPreset.equals(preset, ignoreCase = true)
                                 Surface(
                                     shape = RoundedCornerShape(10.dp),
                                     color = if (selected) AmAccentBlue else MaterialTheme.colorScheme.surfaceVariant,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clickable { equalizerPreset = preset }
+                                        .clickable {
+                                            settingsRepository.setEqualizerPreset(preset)
+                                            musicPlayerManager?.setEqualizerPreset(preset)
+                                        }
                                 ) {
                                     Text(
                                         text = preset,
@@ -500,30 +506,31 @@ fun SettingsScreen(
 
                         SettingActionRow(
                             title = "Subtitle Encoding",
-                            subtitle = "Default: UTF-8 (Universal character encoding)",
+                            subtitle = "Current: ${settings.subtitleEncoding} (Tap to change)",
                             actionWidget = {
-                                Text("UTF-8", fontWeight = FontWeight.Bold, color = AmAccentBlue, fontSize = 12.sp)
-                            }
+                                Text(settings.subtitleEncoding, fontWeight = FontWeight.Bold, color = AmAccentBlue, fontSize = 12.sp)
+                            },
+                            onClick = { showEncodingDialog = true }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        SettingActionRow(
+                        SettingToggleRow(
                             title = "Online Providers",
                             subtitle = "OpenSubtitles, SubDL, and Subscene auto-search",
-                            actionWidget = {
-                                Text("Enabled", fontWeight = FontWeight.SemiBold, color = AmAccentBlue, fontSize = 12.sp)
-                            }
+                            checked = settings.subtitleProvidersEnabled,
+                            onCheckedChange = { settingsRepository.setSubtitleProviders(it) }
                         )
 
                         Spacer(modifier = Modifier.height(14.dp))
 
                         SettingActionRow(
-                            title = "Text Styling",
-                            subtitle = "White text with black semi-transparent backdrop",
+                            title = "Text Styling & Size",
+                            subtitle = "Size: ${settings.subtitleSize} • White text with semi-transparent backdrop",
                             actionWidget = {
-                                Text("Standard", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                            }
+                                Text(settings.subtitleSize, color = AmAccentBlue, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            },
+                            onClick = { showSubtitleSizeDialog = true }
                         )
                     }
 
@@ -575,6 +582,123 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    // Dialog for Double Tap to Seek
+    if (showSeekDialog) {
+        AlertDialog(
+            onDismissRequest = { showSeekDialog = false },
+            title = { Text("Double Tap to Seek", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    listOf(5, 10, 15, 30).forEach { sec ->
+                        val selected = settings.seekDurationSeconds == sec
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    settingsRepository.setSeekDuration(sec)
+                                    showSeekDialog = false
+                                }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            RadioButton(
+                                selected = selected,
+                                onClick = {
+                                    settingsRepository.setSeekDuration(sec)
+                                    showSeekDialog = false
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = AmAccentBlue)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("$sec Seconds", fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSeekDialog = false }) { Text("Cancel", color = AmAccentBlue) }
+            }
+        )
+    }
+
+    // Dialog for Subtitle Encoding
+    if (showEncodingDialog) {
+        AlertDialog(
+            onDismissRequest = { showEncodingDialog = false },
+            title = { Text("Subtitle Encoding", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    listOf("UTF-8", "ISO-8859-1", "Windows-1252", "ASCII").forEach { enc ->
+                        val selected = settings.subtitleEncoding == enc
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    settingsRepository.setSubtitleEncoding(enc)
+                                    showEncodingDialog = false
+                                }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            RadioButton(
+                                selected = selected,
+                                onClick = {
+                                    settingsRepository.setSubtitleEncoding(enc)
+                                    showEncodingDialog = false
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = AmAccentBlue)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(enc, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showEncodingDialog = false }) { Text("Cancel", color = AmAccentBlue) }
+            }
+        )
+    }
+
+    // Dialog for Subtitle Size
+    if (showSubtitleSizeDialog) {
+        AlertDialog(
+            onDismissRequest = { showSubtitleSizeDialog = false },
+            title = { Text("Subtitle Size", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    listOf("Small", "Medium", "Large", "Extra Large").forEach { size ->
+                        val selected = settings.subtitleSize == size
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    settingsRepository.setSubtitleSize(size)
+                                    showSubtitleSizeDialog = false
+                                }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            RadioButton(
+                                selected = selected,
+                                onClick = {
+                                    settingsRepository.setSubtitleSize(size)
+                                    showSubtitleSizeDialog = false
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = AmAccentBlue)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(size, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showSubtitleSizeDialog = false }) { Text("Cancel", color = AmAccentBlue) }
+            }
+        )
     }
 }
 
@@ -681,10 +805,14 @@ private fun SettingToggleRow(
 private fun SettingActionRow(
     title: String,
     subtitle: String,
-    actionWidget: @Composable () -> Unit
+    actionWidget: @Composable () -> Unit,
+    onClick: (() -> Unit)? = null
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
