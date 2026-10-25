@@ -15,6 +15,14 @@ class MusicRepository(private val context: Context) {
     private val _tracks = MutableStateFlow<List<AudioTrack>>(emptyList())
     val tracks: StateFlow<List<AudioTrack>> = _tracks.asStateFlow()
 
+    private val _isOpenSourcePermitted = MutableStateFlow(false)
+    val isOpenSourcePermitted: StateFlow<Boolean> = _isOpenSourcePermitted.asStateFlow()
+
+    suspend fun setOpenSourceStreamingPermitted(permitted: Boolean) = withContext(Dispatchers.IO) {
+        _isOpenSourcePermitted.value = permitted
+        rescanAudio()
+    }
+
     suspend fun rescanAudio(): List<AudioTrack> = withContext(Dispatchers.IO) {
         val list = mutableListOf<AudioTrack>()
 
@@ -64,11 +72,21 @@ class MusicRepository(private val context: Context) {
             }
         } catch (_: Exception) {}
 
-        // Add pre-configured high quality demo music streams
+        // Add built-in demo music
         val demos = getDemoTracks()
         for (demo in demos) {
             if (list.none { it.id == demo.id }) {
                 list.add(demo)
+            }
+        }
+
+        // If open source streaming is permitted, add open-source royalty-free classical and creative commons tracks
+        if (_isOpenSourcePermitted.value) {
+            val openSourceTracks = getOpenSourceLibraryTracks()
+            for (os in openSourceTracks) {
+                if (list.none { it.id == os.id }) {
+                    list.add(os)
+                }
             }
         }
 
@@ -113,6 +131,56 @@ class MusicRepository(private val context: Context) {
                 album = "Quiet Horizons",
                 durationMs = 120000L,
                 sizeBytes = 2400000L
+            )
+        )
+    }
+
+    fun getOpenSourceLibraryTracks(): List<AudioTrack> {
+        return listOf(
+            AudioTrack(
+                id = "os_beethoven_moonlight",
+                uri = "https://upload.wikimedia.org/wikipedia/commons/e/eb/Beethoven_Moonlight_1st_movement.ogg",
+                title = "Moonlight Sonata (Adagio sostenuto)",
+                artist = "Ludwig van Beethoven",
+                album = "Open Source Classical (Musopen)",
+                durationMs = 360000L,
+                sizeBytes = 5400000L
+            ),
+            AudioTrack(
+                id = "os_vivaldi_spring",
+                uri = "https://upload.wikimedia.org/wikipedia/commons/3/3c/Vivaldi_Spring_mvt_1_Allegro_-_John_Harrison_violin.ogg",
+                title = "The Four Seasons: Spring (Allegro)",
+                artist = "Antonio Vivaldi (John Harrison)",
+                album = "Creative Commons Masterpieces",
+                durationMs = 216000L,
+                sizeBytes = 4100000L
+            ),
+            AudioTrack(
+                id = "os_chopin_nocturne",
+                uri = "https://upload.wikimedia.org/wikipedia/commons/9/90/Chopin_Nocturne_Op9_No2.ogg",
+                title = "Nocturne in E-flat major, Op. 9 No. 2",
+                artist = "Frédéric Chopin",
+                album = "Open Piano Archive",
+                durationMs = 265000L,
+                sizeBytes = 4800000L
+            ),
+            AudioTrack(
+                id = "os_mozart_nachtmusik",
+                uri = "https://upload.wikimedia.org/wikipedia/commons/b/b2/Mozart_-_Serenade_No._13_in_G_Major%2C_K._525_-_I._Allegro.ogg",
+                title = "Eine kleine Nachtmusik (I. Allegro)",
+                artist = "Wolfgang Amadeus Mozart",
+                album = "European Open Archives",
+                durationMs = 345000L,
+                sizeBytes = 5900000L
+            ),
+            AudioTrack(
+                id = "os_bach_air",
+                uri = "https://upload.wikimedia.org/wikipedia/commons/3/30/Bach_-_Air_on_the_G_String.ogg",
+                title = "Air on the G String (BWV 1068)",
+                artist = "Johann Sebastian Bach",
+                album = "Baroque Treasures Open Source",
+                durationMs = 290000L,
+                sizeBytes = 4600000L
             )
         )
     }

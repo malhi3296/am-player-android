@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
@@ -71,8 +72,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -108,6 +111,7 @@ fun MediaLibraryScreen(
 
     var showSearchField by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
+    var showRecentlyTab by remember { mutableStateOf(false) }
 
     // Media permissions launcher
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -126,14 +130,18 @@ fun MediaLibraryScreen(
         permissionLauncher.launch(perms)
     }
 
-    // Handle back button when navigating inside a folder
-    BackHandler(enabled = uiState.selectedFolder != null) {
-        viewModel.setSelectedFolder(null)
+    // Handle back button when navigating inside a folder or recently tab
+    BackHandler(enabled = uiState.selectedFolder != null || showRecentlyTab) {
+        if (uiState.selectedFolder != null) {
+            viewModel.setSelectedFolder(null)
+        } else {
+            showRecentlyTab = false
+        }
     }
 
     // Determine the last played video to resume from floating button
     val lastVideo = recentMedia.firstOrNull() ?: allMedia.firstOrNull()
-    val activeFolder = uiState.selectedFolder ?: lastVideo?.folderName ?: "All Videos"
+    val activeFolder = uiState.selectedFolder ?: (if (showRecentlyTab) "Recently Played" else lastVideo?.folderName ?: "All Videos")
 
     Box(
         modifier = modifier
@@ -141,7 +149,7 @@ fun MediaLibraryScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // TOP BAR: ONLY logo at top left (no name, no tagline) + action icons on right
+            // TOP BAR: ONLY logo at top left (white with 50% opacity in dark mode) + action icons on right
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -149,13 +157,18 @@ fun MediaLibraryScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ONLY logo at top left
+                // ONLY logo at top left (white with 50% opacity in dark mode)
                 Image(
                     painter = painterResource(id = R.drawable.am_player_logo),
                     contentDescription = "AM Player Logo",
+                    colorFilter = if (isDarkMode) ColorFilter.tint(Color.White) else null,
                     modifier = Modifier
                         .height(34.dp)
-                        .clickable { viewModel.setSelectedFolder(null) }
+                        .then(if (isDarkMode) Modifier.alpha(0.5f) else Modifier)
+                        .clickable {
+                            viewModel.setSelectedFolder(null)
+                            showRecentlyTab = false
+                        }
                         .testTag("app_logo")
                 )
 
@@ -297,10 +310,95 @@ fun MediaLibraryScreen(
                         )
                     }
                 }
+            } else {
+                // Quick Toggle Row: Folders vs Recently Button (active color = AmAccentBlue #4D6BFE)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (!showRecentlyTab) (if (isDarkMode) SaCardBg else MaterialTheme.colorScheme.surfaceVariant) else Color.Transparent,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (!showRecentlyTab) AmAccentBlue else MaterialTheme.colorScheme.outline),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { showRecentlyTab = false }
+                            .testTag("all_folders_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = null,
+                                tint = if (!showRecentlyTab) AmAccentBlue else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Folders",
+                                fontSize = 12.sp,
+                                fontWeight = if (!showRecentlyTab) FontWeight.Bold else FontWeight.Medium,
+                                color = if (!showRecentlyTab) AmAccentBlue else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    // Recently Button with AmAccentBlue (#4D6BFE)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (showRecentlyTab) AmAccentBlue else (if (isDarkMode) SaCardBg else MaterialTheme.colorScheme.surfaceVariant),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { showRecentlyTab = true }
+                            .testTag("recently_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.History,
+                                contentDescription = null,
+                                tint = if (showRecentlyTab) Color.White else AmAccentBlue,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Recently (${recentMedia.size})",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (showRecentlyTab) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
             }
 
-            // Content Area: Folders Grid matching sa.jpg OR Videos List
-            if (uiState.selectedFolder == null && uiState.viewMode == ViewMode.GRID) {
+            // Content Area: Recently Videos OR Folders Grid matching sa.jpg OR Videos List
+            if (uiState.selectedFolder == null && showRecentlyTab) {
+                // Recently Played Videos List
+                LazyColumn(
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .testTag("recently_videos_list")
+                ) {
+                    items(recentMedia, key = { it.id }) { item ->
+                        SaVideoListItem(
+                            item = item,
+                            onClick = { onPlayMedia(item.id) }
+                        )
+                    }
+                }
+            } else if (uiState.selectedFolder == null && uiState.viewMode == ViewMode.GRID) {
                 // 3-Column Folder Grid matching sa.jpg exactly!
                 val folderGroups = allMedia.groupBy { it.folderName }
                 val folderNames = folderGroups.keys.toList()

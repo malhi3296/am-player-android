@@ -86,3 +86,20 @@ enum class PlayerSkin(
         cardColor = Color(0xFF102117)
     )
 }
+
+enum class VideoColorMode(
+    val id: String,
+    val displayName: String,
+    val description: String,
+    val filterColor: Color = Color.Transparent,
+    val saturation: Float = 1.0f,
+    val contrast: Float = 1.0f
+) {
+    NORMAL("normal", "Original", "Default natural colors", Color.Transparent, 1.0f, 1.0f),
+    VIVID("vivid", "Vivid & Dynamic", "Boosted contrast & richer colors", Color.Transparent, 1.35f, 1.15f),
+    WARM("warm", "Warm Cinema", "Hollywood golden movie tones", Color(0x22FFA726), 1.1f, 1.05f),
+    NIGHT_CARE("night", "Eye Care / Night", "Blue-light shield for dark rooms", Color(0x38FF9800), 0.95f, 1.0f),
+    COOL("cool", "Cool Crisp", "Crisp whites and clear outdoor tones", Color(0x1F00E5FF), 1.05f, 1.05f),
+    NOIR("noir", "B&W Noir", "Classic high-contrast monochrome", Color.Transparent, 0.0f, 1.25f)
+}
+

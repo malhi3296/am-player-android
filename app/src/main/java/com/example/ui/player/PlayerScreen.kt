@@ -79,6 +79,7 @@ fun PlayerScreen(
     var showSpeedDialog by remember { mutableStateOf(false) }
     var showAudioDialog by remember { mutableStateOf(false) }
     var showSkinDialog by remember { mutableStateOf(false) }
+    var showColorModeDialog by remember { mutableStateOf(false) }
     var showMoreOptionsDialog by remember { mutableStateOf(false) }
 
     val focusRequester = remember { androidx.compose.ui.focus.FocusRequester() }
@@ -208,6 +209,15 @@ fun PlayerScreen(
                 )
         )
 
+        // Video Color Mode Grading Overlay
+        if (uiState.videoColorMode.filterColor != Color.Transparent) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(uiState.videoColorMode.filterColor)
+            )
+        }
+
         // Gesture Overlay
         GestureOverlay(
             isLocked = uiState.isLocked,
@@ -331,12 +341,21 @@ fun PlayerScreen(
 
         if (showMoreOptionsDialog) {
             PlayerMoreOptionsDialog(
+                onOpenColorModes = { showColorModeDialog = true },
                 onOpenSkins = { showSkinDialog = true },
                 onSetPointA = { viewModel.setAbRepeatPointA() },
                 onSetPointB = { viewModel.setAbRepeatPointB() },
                 onClearLoop = { viewModel.clearAbRepeat() },
                 onCaptureFrame = { viewModel.captureScreenshot() },
                 onDismiss = { showMoreOptionsDialog = false }
+            )
+        }
+
+        if (showColorModeDialog) {
+            com.example.ui.player.components.VideoColorModeDialog(
+                currentMode = uiState.videoColorMode,
+                onSelectMode = { viewModel.setVideoColorMode(it) },
+                onDismiss = { showColorModeDialog = false }
             )
         }
     }

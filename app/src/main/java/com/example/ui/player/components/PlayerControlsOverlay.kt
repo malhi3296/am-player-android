@@ -105,7 +105,9 @@ fun PlayerControlsOverlay(
                     shape = CircleShape,
                     color = Color(0xCC0E131B),
                     border = androidx.compose.foundation.BorderStroke(1.dp, CyanNeon),
-                    modifier = Modifier.clickable { onLockToggle() }
+                    modifier = Modifier
+                        .clickable { onLockToggle() }
+                        .testTag("player_unlock_button")
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -239,7 +241,10 @@ fun PlayerControlsOverlay(
                             tint = skinAccent
                         )
                     }
-                    IconButton(onClick = onLockToggle) {
+                    IconButton(
+                        onClick = onLockToggle,
+                        modifier = Modifier.testTag("lock_toggle_button")
+                    ) {
                         Icon(
                             imageVector = Icons.Default.LockOpen,
                             contentDescription = "Lock Screen",
@@ -328,65 +333,108 @@ fun PlayerControlsOverlay(
                     .navigationBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
-                // Time & Duration
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = formatTime(uiState.currentPositionMs),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
+                val isLiveStream = uiState.durationMs <= 0L || (uiState.mediaItem?.folderName?.contains("IPTV") == true)
 
-                    Text(
-                        text = if (uiState.showRemainingTime) {
-                            val remaining = (uiState.durationMs - uiState.currentPositionMs).coerceAtLeast(0L)
-                            "-${formatTime(remaining)}"
-                        } else {
-                            formatTime(uiState.durationMs)
+                if (isLiveStream) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0x33EF4444),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFFEF4444))
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "LIVE BROADCAST",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Connected • Low Latency HLS",
+                            fontSize = 12.sp,
+                            color = Color(0xFFA1A1AA)
+                        )
+                    }
+                } else {
+                    // Time & Duration
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = formatTime(uiState.currentPositionMs),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+
+                        Text(
+                            text = if (uiState.showRemainingTime) {
+                                val remaining = (uiState.durationMs - uiState.currentPositionMs).coerceAtLeast(0L)
+                                "-${formatTime(remaining)}"
+                            } else {
+                                formatTime(uiState.durationMs)
+                            },
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = CyanNeon,
+                            modifier = Modifier.clickable { onTimeDisplayClick() }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    // Custom Seekbar Slider
+                    var isDragging by remember { mutableStateOf(false) }
+                    var dragValue by remember { mutableFloatStateOf(0f) }
+
+                    val sliderValue = if (isDragging) {
+                        dragValue
+                    } else if (uiState.durationMs > 0) {
+                        uiState.currentPositionMs.toFloat() / uiState.durationMs.toFloat()
+                    } else 0f
+
+                    Slider(
+                        value = sliderValue.coerceIn(0f, 1f),
+                        onValueChange = {
+                            isDragging = true
+                            dragValue = it
                         },
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = CyanNeon,
-                        modifier = Modifier.clickable { onTimeDisplayClick() }
+                        onValueChangeFinished = {
+                            isDragging = false
+                            val targetMs = (dragValue * uiState.durationMs).toLong()
+                            onSeek(targetMs)
+                        },
+                        colors = SliderDefaults.colors(
+                            thumbColor = CyanNeon,
+                            activeTrackColor = CyanNeon,
+                            inactiveTrackColor = Color(0x66FFFFFF)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("timeline_slider")
                     )
                 }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Custom Seekbar Slider
-                var isDragging by remember { mutableStateOf(false) }
-                var dragValue by remember { mutableFloatStateOf(0f) }
-
-                val sliderValue = if (isDragging) {
-                    dragValue
-                } else if (uiState.durationMs > 0) {
-                    uiState.currentPositionMs.toFloat() / uiState.durationMs.toFloat()
-                } else 0f
-
-                Slider(
-                    value = sliderValue.coerceIn(0f, 1f),
-                    onValueChange = {
-                        isDragging = true
-                        dragValue = it
-                    },
-                    onValueChangeFinished = {
-                        isDragging = false
-                        val targetMs = (dragValue * uiState.durationMs).toLong()
-                        onSeek(targetMs)
-                    },
-                    colors = SliderDefaults.colors(
-                        thumbColor = CyanNeon,
-                        activeTrackColor = CyanNeon,
-                        inactiveTrackColor = Color(0x66FFFFFF)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("timeline_slider")
-                )
 
                 // Quick Action Bar
                 Row(

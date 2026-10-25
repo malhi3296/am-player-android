@@ -52,8 +52,10 @@ fun GestureOverlay(
             .pointerInput(isLocked) {
                 if (isLocked) {
                     awaitEachGesture {
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        val up = awaitFirstDown(requireUnconsumed = false)
+                        awaitFirstDown(requireUnconsumed = false)
+                        do {
+                            val event = awaitPointerEvent()
+                        } while (event.changes.any { it.pressed })
                         onSingleTap()
                     }
                     return@pointerInput

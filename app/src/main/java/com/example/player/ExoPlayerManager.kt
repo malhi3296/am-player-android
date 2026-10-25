@@ -50,9 +50,20 @@ class ExoPlayerManager(private val context: Context) {
 
         trackSelector = DefaultTrackSelector(context)
 
+        val httpDataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
+            .setAllowCrossProtocolRedirects(true)
+            .setConnectTimeoutMs(15000)
+            .setReadTimeoutMs(15000)
+            .setUserAgent("AMPlayer/1.0 (Linux; Android)")
+
+        val dataSourceFactory = androidx.media3.datasource.DefaultDataSource.Factory(context, httpDataSourceFactory)
+        val mediaSourceFactory = androidx.media3.exoplayer.source.DefaultMediaSourceFactory(dataSourceFactory)
+
         val player = ExoPlayer.Builder(context, renderersFactory)
             .setTrackSelector(trackSelector!!)
             .setLoadControl(loadControl)
+            .setMediaSourceFactory(mediaSourceFactory)
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(C.USAGE_MEDIA)
@@ -112,7 +123,12 @@ class ExoPlayerManager(private val context: Context) {
         val player = getOrCreatePlayer()
         val mediaUri = Uri.parse(uriString)
 
+        val isHlsStream = uriString.contains(".m3u8", ignoreCase = true) || uriString.contains("/hls/", ignoreCase = true)
         val mediaItemBuilder = MediaItem.Builder().setUri(mediaUri)
+
+        if (isHlsStream) {
+            mediaItemBuilder.setMimeType(MimeTypes.APPLICATION_M3U8)
+        }
 
         // Attach external subtitle if present
         if (externalSubtitleFile != null && externalSubtitleFile.exists()) {
@@ -126,7 +142,12 @@ class ExoPlayerManager(private val context: Context) {
         }
 
         val item = mediaItemBuilder.build()
-        player.setMediaItem(item, startPositionMs)
+        // For live streams, start at default live edge position instead of seeking
+        if (isHlsStream) {
+            player.setMediaItem(item)
+        } else {
+            player.setMediaItem(item, startPositionMs)
+        }
         player.prepare()
         player.playWhenReady = true
     }

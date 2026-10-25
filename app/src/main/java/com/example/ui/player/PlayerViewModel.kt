@@ -65,7 +65,8 @@ data class PlayerUiState(
     val abRepeatPointB: Long? = null,
     val isMuted: Boolean = false,
     val toastMessage: String? = null,
-    val triggerSubtitleSearch: Boolean = false
+    val triggerSubtitleSearch: Boolean = false,
+    val videoColorMode: com.example.player.VideoColorMode = com.example.player.VideoColorMode.NORMAL
 )
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -104,6 +105,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 )
             }
         }
+
+        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+            val msg = error.message ?: "Live stream buffering or unavailable"
+            _uiState.update {
+                it.copy(
+                    isBuffering = false,
+                    toastMessage = "Stream Alert: ${msg.take(45)}"
+                )
+            }
+        }
     }
 
     init {
@@ -111,41 +122,84 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         startPositionTracker()
     }
 
+    fun setVideoColorMode(mode: com.example.player.VideoColorMode) {
+        _uiState.update { it.copy(videoColorMode = mode, toastMessage = "Color Mode: ${mode.displayName}") }
+    }
+
     fun loadMedia(mediaUriOrId: String) {
         viewModelScope.launch {
-            val item = mediaRepo.getMediaById(mediaUriOrId)
-                ?: mediaRepo.resolveMediaFromUri(Uri.parse(mediaUriOrId))
+            val matchingChannel = container.iptvRepository.folders.value
+                .flatMap { it.channels }
+                .firstOrNull { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) }
+                ?: container.iptvRepository.channels.value
+                    .firstOrNull { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) }
+
+            val item = if (matchingChannel != null) {
+                MediaItemEntity(
+                    id = mediaUriOrId,
+                    uri = mediaUriOrId,
+                    title = matchingChannel.name,
+                    folderName = "IPTV: ${matchingChannel.category}",
+                    resolution = "Live Stream"
+                )
+            } else if (mediaUriOrId.startsWith("http://", ignoreCase = true) || mediaUriOrId.startsWith("https://", ignoreCase = true)) {
+                MediaItemEntity(
+                    id = mediaUriOrId,
+                    uri = mediaUriOrId,
+                    title = "IPTV Live Broadcast",
+                    folderName = "IPTV Stream",
+                    resolution = "Live Stream"
+                )
+            } else {
+                mediaRepo.getMediaById(mediaUriOrId)
+                    ?: mediaRepo.resolveMediaFromUri(Uri.parse(mediaUriOrId))
+                    ?: MediaItemEntity(
+                        id = mediaUriOrId,
+                        uri = mediaUriOrId,
+                        title = Uri.parse(mediaUriOrId).lastPathSegment ?: "Media Video",
+                        folderName = "Local Media",
+                        resolution = "Video"
+                    )
+            }
 
             _uiState.update { it.copy(mediaItem = item) }
 
-            // Compute or retrieve video hash for automatic subtitle discovery
-            videoHash = try {
-                OpenSubtitlesHasher.computeHashFromUri(
-                    getApplication(),
-                    Uri.parse(item.uri),
-                    item.title
-                )
-            } catch (e: Exception) {
-                OpenSubtitlesHasher.generateFallbackHash(item.title)
-            }
+            val isStream = item.uri.startsWith("http://", ignoreCase = true) || item.uri.startsWith("https://", ignoreCase = true)
+            val isLive = isStream && (item.uri.contains(".m3u8", ignoreCase = true) || matchingChannel != null || item.resolution == "Live Stream")
 
-            // Check cached subtitles in Room
-            val cached = subtitleRepo.getCachedSubtitles(videoHash)
-            _uiState.update { it.copy(cachedSubtitles = cached) }
+            if (!isLive) {
+                // Compute or retrieve video hash for automatic subtitle discovery
+                videoHash = try {
+                    OpenSubtitlesHasher.computeHashFromUri(
+                        getApplication(),
+                        Uri.parse(item.uri),
+                        item.title
+                    )
+                } catch (e: Exception) {
+                    OpenSubtitlesHasher.generateFallbackHash(item.title)
+                }
 
-            val initialSub = cached.firstOrNull()?.let { File(it.filePath) }
-            if (initialSub != null && initialSub.exists()) {
-                activeSubtitleFile = initialSub
-                _uiState.update { it.copy(currentSubtitleTitle = cached.first().language) }
-            }
+                // Check cached subtitles in Room
+                val cached = subtitleRepo.getCachedSubtitles(videoHash)
+                _uiState.update { it.copy(cachedSubtitles = cached) }
 
-            // Start playback from saved resume position
-            val resumePos = if (item.completed) 0L else item.playbackPositionMs
-            playerManager.prepareMedia(item.uri, resumePos, activeSubtitleFile)
+                val initialSub = cached.firstOrNull()?.let { File(it.filePath) }
+                if (initialSub != null && initialSub.exists()) {
+                    activeSubtitleFile = initialSub
+                    _uiState.update { it.copy(currentSubtitleTitle = cached.first().language) }
+                }
 
-            // Trigger automated background subtitle search
-            if (activeSubtitleFile == null) {
-                autoSearchSubtitles(videoHash, item.title)
+                // Start playback from saved resume position
+                val resumePos = if (item.completed) 0L else item.playbackPositionMs
+                playerManager.prepareMedia(item.uri, resumePos, activeSubtitleFile)
+
+                // Trigger automated background subtitle search
+                if (activeSubtitleFile == null) {
+                    autoSearchSubtitles(videoHash, item.title)
+                }
+            } else {
+                // Live IPTV Stream: Start directly without seeking or subtitle hashing
+                playerManager.prepareMedia(item.uri, 0L, null)
             }
         }
     }

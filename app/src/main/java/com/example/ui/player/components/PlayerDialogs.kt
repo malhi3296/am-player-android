@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -318,6 +319,7 @@ fun PlayerSkinDialog(
 
 @Composable
 fun PlayerMoreOptionsDialog(
+    onOpenColorModes: () -> Unit,
     onOpenSkins: () -> Unit,
     onSetPointA: () -> Unit,
     onSetPointB: () -> Unit,
@@ -334,6 +336,17 @@ fun PlayerMoreOptionsDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = DarkSurfaceElevated,
+                    modifier = Modifier.fillMaxWidth().clickable { onOpenColorModes(); onDismiss() }
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(14.dp)) {
+                        Icon(Icons.Default.Palette, contentDescription = null, tint = CyanNeon, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text("Video Color Modes (Vivid, Warm, Eye Care)", color = Color.White)
+                    }
+                }
                 Surface(
                     shape = RoundedCornerShape(12.dp),
                     color = DarkSurfaceElevated,
@@ -368,6 +381,77 @@ fun PlayerMoreOptionsDialog(
                     modifier = Modifier.fillMaxWidth().clickable { onClearLoop(); onDismiss() }
                 ) {
                     Text("Clear A-B Repeat Loop", color = Color(0xFFFF5252), modifier = Modifier.padding(14.dp))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = CyanNeon)
+            }
+        }
+    )
+}
+
+@Composable
+fun VideoColorModeDialog(
+    currentMode: com.example.player.VideoColorMode,
+    onSelectMode: (com.example.player.VideoColorMode) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Default.Palette, contentDescription = null, tint = CyanNeon)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Video Color Modes", color = TextPrimary, fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                com.example.player.VideoColorMode.values().forEach { mode ->
+                    val isSelected = mode == currentMode
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) DarkSurfaceElevated else Color.Transparent,
+                        border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, CyanNeon) else null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onSelectMode(mode)
+                                onDismiss()
+                            }
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    onSelectMode(mode)
+                                    onDismiss()
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = CyanNeon)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = mode.displayName,
+                                    color = if (isSelected) CyanNeon else TextPrimary,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    fontSize = 14.sp
+                                )
+                                Text(
+                                    text = mode.description,
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    }
                 }
             }
         },

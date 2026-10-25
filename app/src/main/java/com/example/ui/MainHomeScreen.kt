@@ -58,7 +58,7 @@ fun MainHomeScreen(
 ) {
     var currentTab by remember { mutableStateOf(BottomNavTab.HOME) }
     val musicTracks by container.musicRepository.tracks.collectAsState()
-    val iptvChannels by container.iptvRepository.channels.collectAsState()
+    val iptvFolders by container.iptvRepository.folders.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -121,6 +121,7 @@ fun MainHomeScreen(
                         MusicScreen(
                             tracks = musicTracks,
                             playerManager = container.musicPlayerManager,
+                            musicRepository = container.musicRepository,
                             onRescan = {
                                 // Trigger rescan of audio
                             }
@@ -128,11 +129,9 @@ fun MainHomeScreen(
                     }
                     BottomNavTab.IPTV -> {
                         IptvScreen(
-                            channels = iptvChannels,
-                            onPlayChannel = onPlayMedia,
-                            onAddCustomChannel = { name, url ->
-                                container.iptvRepository.addCustomStream(name, url)
-                            }
+                            folders = iptvFolders,
+                            repository = container.iptvRepository,
+                            onPlayChannel = onPlayMedia
                         )
                     }
                     BottomNavTab.SETTINGS -> {
