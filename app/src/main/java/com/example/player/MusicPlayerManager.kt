@@ -35,7 +35,7 @@ data class EqualizerPreset(
 )
 
 data class EqualizerState(
-    val isEnabled: Boolean = true,
+    val isEnabled: Boolean = false,
     val currentPreset: String = "Balanced",
     val bandLevels: List<Int> = listOf(0, 0, 0, 0, 0), // 60Hz, 230Hz, 910Hz, 3.6kHz, 14kHz
     val bassBoostStrength: Int = 300 // 0 to 1000
@@ -87,6 +87,15 @@ class MusicPlayerManager(private val context: Context) {
     private val listener = object : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             _state.update { it.copy(isPlaying = isPlaying) }
+            val cur = _state.value.currentTrack
+            if (cur != null) {
+                PlaybackNotificationHelper.showPlaybackNotification(
+                    context,
+                    cur.title,
+                    cur.artist,
+                    isPlaying
+                )
+            }
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -373,5 +382,6 @@ class MusicPlayerManager(private val context: Context) {
         bassBoost = null
         exoPlayer?.release()
         exoPlayer = null
+        PlaybackNotificationHelper.dismissNotification(context)
     }
 }

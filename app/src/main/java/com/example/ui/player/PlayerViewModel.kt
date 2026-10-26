@@ -66,7 +66,9 @@ data class PlayerUiState(
     val isMuted: Boolean = false,
     val toastMessage: String? = null,
     val triggerSubtitleSearch: Boolean = false,
-    val videoColorMode: com.example.player.VideoColorMode = com.example.player.VideoColorMode.NORMAL
+    val videoColorMode: com.example.player.VideoColorMode = com.example.player.VideoColorMode.NORMAL,
+    val gestureControlsEnabled: Boolean = true,
+    val seekDurationSeconds: Int = 10
 )
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -93,6 +95,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (isPlaying) {
                 scheduleControlsHide()
             }
+            val title = _uiState.value.mediaItem?.title ?: "Video"
+            com.example.player.PlaybackNotificationHelper.showPlaybackNotification(
+                getApplication(),
+                title,
+                "AM Video Player",
+                isPlaying
+            )
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -120,6 +129,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     init {
         exoPlayer.addListener(playerListener)
         startPositionTracker()
+        val settings = container.settingsRepository.settings.value
+        _uiState.update {
+            it.copy(
+                gestureControlsEnabled = settings.gestureControlsEnabled,
+                seekDurationSeconds = settings.seekDurationSeconds
+            )
+        }
     }
 
     fun setVideoColorMode(mode: com.example.player.VideoColorMode) {
@@ -569,6 +585,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun toggleDecoderMode() {
+        val newMode = when (_uiState.value.decoderMode) {
+            DecoderMode.HW -> DecoderMode.HW_PLUS
+            DecoderMode.HW_PLUS -> DecoderMode.SW
+            DecoderMode.SW -> DecoderMode.HW
+        }
+        _uiState.update { it.copy(decoderMode = newMode, toastMessage = "Decoder: ${newMode.name}") }
+    }
+
     fun pausePlayback() {
         exoPlayer.pause()
         _uiState.update { it.copy(isPlaying = false) }
@@ -581,8 +606,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 _uiState.value.mediaItem?.uri?.startsWith("https://", ignoreCase = true) == true ||
                 _uiState.value.mediaItem?.resolution == "Live Stream"
 
+        exoPlayer.playWhenReady = false
         if (isIptv) {
-            exoPlayer.playWhenReady = false
             exoPlayer.stop()
             exoPlayer.clearMediaItems()
             _uiState.update { it.copy(isPlaying = false, isBuffering = false) }
@@ -590,6 +615,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             exoPlayer.pause()
             _uiState.update { it.copy(isPlaying = false) }
         }
+        com.example.player.PlaybackNotificationHelper.dismissNotification(getApplication())
     }
 
     fun saveResumePosition() {

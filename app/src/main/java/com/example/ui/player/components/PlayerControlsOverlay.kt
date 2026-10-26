@@ -4,8 +4,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,29 +14,29 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Audiotrack
-import androidx.compose.material.icons.filled.CropFree
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.AspectRatio
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Subtitles
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -57,15 +57,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.player.AspectRatioMode
 import com.example.player.DecoderMode
 import com.example.ui.player.PlayerUiState
-import com.example.ui.theme.BoostOrange
-import com.example.ui.theme.CyanNeon
-import com.example.ui.theme.PurpleNeon
-
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.material.icons.filled.Palette
 
 @Composable
 fun PlayerControlsOverlay(
@@ -83,11 +76,12 @@ fun PlayerControlsOverlay(
     onPipClick: () -> Unit,
     onTimeDisplayClick: () -> Unit,
     onMoreToolsClick: () -> Unit,
+    onDecoderToggle: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val skinAccent = uiState.playerSkin.accentColor
-    val skinSecondary = uiState.playerSkin.secondaryColor
-    // If locked, only display the unlock button
+
+    // Locked Screen View
     if (uiState.isLocked) {
         AnimatedVisibility(
             visible = uiState.showControls,
@@ -98,16 +92,15 @@ fun PlayerControlsOverlay(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(24.dp),
-                contentAlignment = Alignment.TopStart
+                    .padding(24.dp)
             ) {
                 Surface(
-                    shape = CircleShape,
-                    color = Color(0xCC0E131B),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, CyanNeon),
+                    shape = RoundedCornerShape(24.dp),
+                    color = Color.Black.copy(alpha = 0.7f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.3f)),
                     modifier = Modifier
+                        .align(Alignment.BottomStart)
                         .clickable { onLockToggle() }
-                        .testTag("player_unlock_button")
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -115,15 +108,15 @@ fun PlayerControlsOverlay(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Lock,
-                            contentDescription = "Screen Locked",
-                            tint = CyanNeon,
-                            modifier = Modifier.size(20.dp)
+                            contentDescription = "Unlock Screen",
+                            tint = skinAccent,
+                            modifier = Modifier.size(22.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Tap to Unlock",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = Color.White
                         )
                     }
@@ -133,6 +126,7 @@ fun PlayerControlsOverlay(
         return
     }
 
+    // Full Player Controls Overlay (Pixel-perfect to player.jpg)
     AnimatedVisibility(
         visible = uiState.showControls,
         enter = fadeIn(),
@@ -145,280 +139,168 @@ fun PlayerControlsOverlay(
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = 0.75f),
+                            Color.Black.copy(alpha = 0.85f),
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.85f)
+                            Color.Black.copy(alpha = 0.90f)
                         )
                     )
                 )
         ) {
-            // Top Bar
+            // TOP BAR (Back button, Media Title, Audio, Subtitle, HW pill, 3-dots)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.TopCenter)
-                    .padding(horizontal = 16.dp, vertical = 20.dp),
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                // Left: Back button + Video Title
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)
                 ) {
                     IconButton(
                         onClick = onBackClick,
-                        modifier = Modifier.testTag("player_back_button")
+                        modifier = Modifier
+                            .size(40.dp)
+                            .testTag("player_back_button")
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = Color.White
+                            tint = Color.White,
+                            modifier = Modifier.size(26.dp)
                         )
                     }
 
                     Spacer(modifier = Modifier.width(8.dp))
 
-                    Column {
-                        Text(
-                            text = uiState.mediaItem?.title ?: "AM Player",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = CyanNeon.copy(alpha = 0.2f),
-                                modifier = Modifier.padding(end = 6.dp)
-                            ) {
-                                Text(
-                                    text = "HW+",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CyanNeon,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                )
-                            }
-                            if (uiState.currentSubtitleTitle != null) {
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = PurpleNeon.copy(alpha = 0.2f)
-                                ) {
-                                    Text(
-                                        text = "CC: ${uiState.currentSubtitleTitle}",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = PurpleNeon,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                                    )
-                                }
-                            }
-                        }
-                    }
+                    Text(
+                        text = uiState.mediaItem?.title ?: "AM Player",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 18.sp
+                    )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onAudioTrackClick) {
-                        Icon(
-                            imageVector = Icons.Default.Audiotrack,
-                            contentDescription = "Audio Tracks",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = onPipClick) {
-                        Icon(
-                            imageVector = Icons.Default.PictureInPictureAlt,
-                            contentDescription = "Picture in Picture",
-                            tint = Color.White
-                        )
-                    }
-                    IconButton(onClick = onMoreToolsClick) {
-                        Icon(
-                            imageVector = Icons.Default.Palette,
-                            contentDescription = "Skins and Tools",
-                            tint = skinAccent
-                        )
-                    }
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Right action icons: Audio Track, Subtitles, HW, 3-dots
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Audio track icon (Music note)
                     IconButton(
-                        onClick = onLockToggle,
-                        modifier = Modifier.testTag("lock_toggle_button")
+                        onClick = onAudioTrackClick,
+                        modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.LockOpen,
-                            contentDescription = "Lock Screen",
-                            tint = Color.White
+                            imageVector = Icons.Default.MusicNote,
+                            contentDescription = "Audio Tracks",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
-                }
-            }
 
-            // Center Play / Pause & Skip Controls
-            Row(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(
-                    onClick = onRewindClick,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.4f))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FastRewind,
-                        contentDescription = "Rewind 10s",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(36.dp))
-
-                IconButton(
-                    onClick = onPlayPauseClick,
-                    modifier = Modifier
-                        .size(72.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.radialGradient(
-                                listOf(CyanNeon.copy(alpha = 0.9f), Color(0xFF0091EA))
-                            )
-                        )
-                        .testTag("play_pause_button")
-                ) {
-                    if (uiState.isBuffering) {
-                        CircularProgressIndicator(
-                            color = Color.Black,
-                            strokeWidth = 3.dp,
-                            modifier = Modifier.size(36.dp)
-                        )
-                    } else {
+                    // Subtitle icon
+                    IconButton(
+                        onClick = onSubtitleClick,
+                        modifier = Modifier.size(38.dp)
+                    ) {
                         Icon(
-                            imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (uiState.isPlaying) "Pause" else "Play",
-                            tint = Color.Black,
-                            modifier = Modifier.size(42.dp)
+                            imageVector = Icons.Default.Subtitles,
+                            contentDescription = "Subtitles",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    // HW / SW Decoder Mode Pill
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .border(1.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(4.dp))
+                            .clickable { onDecoderToggle() }
+                            .padding(horizontal = 7.dp, vertical = 3.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = when (uiState.decoderMode) {
+                                DecoderMode.HW -> "HW"
+                                DecoderMode.HW_PLUS -> "HW+"
+                                DecoderMode.SW -> "SW"
+                            },
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    // 3-dots More Menu
+                    IconButton(
+                        onClick = onMoreToolsClick,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = "More Options",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.width(36.dp))
-
-                IconButton(
-                    onClick = onForwardClick,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.4f))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.FastForward,
-                        contentDescription = "Fast Forward 10s",
-                        tint = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
             }
 
-            // Bottom Bar Controls & Prominent Timeline Seekbar
+            // Buffering center spinner if buffering
+            if (uiState.isBuffering) {
+                CircularProgressIndicator(
+                    color = skinAccent,
+                    strokeWidth = 3.dp,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .align(Alignment.Center)
+                )
+            }
+
+            // BOTTOM CONTROLS & TIMELINE (Pixel perfect matching player.jpg)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
             ) {
-                val isStrictLiveStream = (uiState.mediaItem?.folderName?.contains("IPTV", ignoreCase = true) == true ||
-                        uiState.mediaItem?.uri?.contains(".m3u8", ignoreCase = true) == true) && uiState.durationMs <= 0L
+                // Seekbar Row with Timestamps flanking it
+                var isDragging by remember { mutableStateOf(false) }
+                var dragValue by remember { mutableFloatStateOf(0f) }
 
-                if (isStrictLiveStream) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0x33EF4444),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEF4444))
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(Color(0xFFEF4444))
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "LIVE BROADCAST",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
-                        }
+                val sliderValue = if (isDragging) {
+                    dragValue
+                } else if (uiState.durationMs > 0) {
+                    uiState.currentPositionMs.toFloat() / uiState.durationMs.toFloat()
+                } else 0f
 
-                        Text(
-                            text = "Connected • Low Latency Live Stream",
-                            fontSize = 12.sp,
-                            color = Color(0xFFA1A1AA)
-                        )
-                    }
-                } else {
-                    // Time & Duration Header
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = formatTime(uiState.currentPositionMs),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Elapsed Time (Left) e.g. "00:01"
+                    Text(
+                        text = formatTime(if (isDragging) (dragValue * uiState.durationMs).toLong() else uiState.currentPositionMs),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
 
-                        Text(
-                            text = if (uiState.durationMs > 0L) {
-                                if (uiState.showRemainingTime) {
-                                    val remaining = (uiState.durationMs - uiState.currentPositionMs).coerceAtLeast(0L)
-                                    "-${formatTime(remaining)}"
-                                } else {
-                                    formatTime(uiState.durationMs)
-                                }
-                            } else "--:--",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = skinAccent,
-                            modifier = Modifier.clickable { onTimeDisplayClick() }
-                        )
-                    }
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    // Prominent Seekbar Slider
-                    var isDragging by remember { mutableStateOf(false) }
-                    var dragValue by remember { mutableFloatStateOf(0f) }
-
-                    val sliderValue = if (isDragging) {
-                        dragValue
-                    } else if (uiState.durationMs > 0) {
-                        uiState.currentPositionMs.toFloat() / uiState.durationMs.toFloat()
-                    } else 0f
-
+                    // Timeline Slider
                     Slider(
                         value = sliderValue.coerceIn(0f, 1f),
                         onValueChange = {
@@ -433,131 +315,125 @@ fun PlayerControlsOverlay(
                         colors = SliderDefaults.colors(
                             thumbColor = skinAccent,
                             activeTrackColor = skinAccent,
-                            inactiveTrackColor = Color(0x66FFFFFF)
+                            inactiveTrackColor = Color.White.copy(alpha = 0.35f)
                         ),
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .weight(1f)
                             .height(28.dp)
                             .testTag("timeline_slider")
                     )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    // Remaining Time (Right) e.g. "-58:27"
+                    val remainingMs = (uiState.durationMs - uiState.currentPositionMs).coerceAtLeast(0L)
+                    val remainingText = if (uiState.durationMs > 0L) "-${formatTime(remainingMs)}" else "--:--"
+
+                    Text(
+                        text = remainingText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                        modifier = Modifier.clickable { onTimeDisplayClick() }
+                    )
                 }
 
-                // Quick Action Bar
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Bottom Controls Row: Lock (left) | SkipPrev, Play/Pause, SkipNext (center) | Aspect, PiP (right)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Aspect ratio chip
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color(0x661E293B),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33FFFFFF)),
-                        modifier = Modifier.clickable { onAspectRatioClick() }
+                    // Left: Lock screen button
+                    IconButton(
+                        onClick = onLockToggle,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .testTag("lock_toggle_button")
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CropFree,
-                                contentDescription = "Aspect Ratio",
-                                tint = CyanNeon,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = uiState.aspectRatioMode.displayName,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
-                            )
-                        }
-                    }
-
-                    // Playback speed chip
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = Color(0x661E293B),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0x33FFFFFF)),
-                        modifier = Modifier.clickable { onSpeedClick() }
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Speed,
-                                contentDescription = "Playback Speed",
-                                tint = PurpleNeon,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "${uiState.playbackSpeed}x",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
-                    }
-
-                    // Audio boost chip
-                    val volPercentage = (uiState.volume * 100).toInt()
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = if (uiState.volume > 1.0f) BoostOrange.copy(alpha = 0.2f) else Color(0x661E293B),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (uiState.volume > 1.0f) BoostOrange else Color(0x33FFFFFF)
+                        Icon(
+                            imageVector = Icons.Default.LockOpen,
+                            contentDescription = "Lock Controls",
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp)
                         )
+                    }
+
+                    // Center: Skip Previous | Large Play/Pause | Skip Next
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(28.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        // Previous / Rewind 10s
+                        IconButton(
+                            onClick = onRewindClick,
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.VolumeUp,
-                                contentDescription = "Audio Volume",
-                                tint = if (uiState.volume > 1.0f) BoostOrange else CyanNeon,
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.SkipPrevious,
+                                contentDescription = "Skip Previous",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (uiState.volume > 1.0f) "$volPercentage% Boost" else "$volPercentage%",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (uiState.volume > 1.0f) BoostOrange else Color.White
+                        }
+
+                        // Center Play / Pause (Solid white icon as in photo)
+                        IconButton(
+                            onClick = onPlayPauseClick,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .testTag("play_pause_button")
+                        ) {
+                            Icon(
+                                imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = if (uiState.isPlaying) "Pause" else "Play",
+                                tint = Color.White,
+                                modifier = Modifier.size(44.dp)
+                            )
+                        }
+
+                        // Next / Forward 10s
+                        IconButton(
+                            onClick = onForwardClick,
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.SkipNext,
+                                contentDescription = "Skip Next",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
 
-                    // Subtitle Button
-                    Surface(
-                        shape = RoundedCornerShape(16.dp),
-                        color = if (uiState.currentSubtitleTitle != null) CyanNeon.copy(alpha = 0.2f) else Color(0x661E293B),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (uiState.currentSubtitleTitle != null) CyanNeon else Color(0x33FFFFFF)
-                        ),
-                        modifier = Modifier.clickable { onSubtitleClick() }
+                    // Right: Aspect ratio switch & Fullscreen/PiP
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        IconButton(
+                            onClick = onAspectRatioClick,
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Subtitles,
-                                contentDescription = "Subtitles",
-                                tint = if (uiState.currentSubtitleTitle != null) CyanNeon else Color.White,
-                                modifier = Modifier.size(16.dp)
+                                imageVector = Icons.Default.AspectRatio,
+                                contentDescription = "Aspect Ratio",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Subs",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = Color.White
+                        }
+
+                        IconButton(
+                            onClick = onPipClick,
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PictureInPictureAlt,
+                                contentDescription = "Picture in Picture",
+                                tint = Color.White,
+                                modifier = Modifier.size(24.dp)
                             )
                         }
                     }

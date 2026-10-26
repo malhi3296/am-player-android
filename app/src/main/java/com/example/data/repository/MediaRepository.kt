@@ -16,14 +16,38 @@ class MediaRepository(
     private val context: Context,
     private val mediaDao: MediaDao
 ) {
+    private val prefs = context.getSharedPreferences("am_player_media_prefs", Context.MODE_PRIVATE)
+
     val allMedia: Flow<List<MediaItemEntity>> = mediaDao.getAllMedia()
     val recentMedia: Flow<List<MediaItemEntity>> = mediaDao.getRecentMedia()
+
+    fun getLastPlayedVideoId(): String? {
+        return prefs.getString("last_played_video_id", null)
+    }
+
+    fun setLastPlayedVideoId(id: String) {
+        prefs.edit().putString("last_played_video_id", id).apply()
+    }
+
+    suspend fun recordPlaybackStart(id: String) = withContext(Dispatchers.IO) {
+        setLastPlayedVideoId(id)
+        val existing = mediaDao.getMediaById(id)
+        if (existing != null) {
+            mediaDao.updatePlaybackPosition(
+                id = id,
+                positionMs = existing.playbackPositionMs,
+                completed = false,
+                timestamp = System.currentTimeMillis()
+            )
+        }
+    }
 
     suspend fun getMediaById(id: String): MediaItemEntity? = withContext(Dispatchers.IO) {
         mediaDao.getMediaById(id)
     }
 
     suspend fun savePlaybackPosition(id: String, positionMs: Long, durationMs: Long) = withContext(Dispatchers.IO) {
+        setLastPlayedVideoId(id)
         val completed = durationMs > 0 && positionMs >= (durationMs - 5000L)
         mediaDao.updatePlaybackPosition(id, positionMs, completed, System.currentTimeMillis())
     }
@@ -34,6 +58,14 @@ class MediaRepository(
 
     suspend fun addMediaItem(item: MediaItemEntity) = withContext(Dispatchers.IO) {
         mediaDao.insertOrUpdate(item)
+    }
+
+    suspend fun deleteMediaItems(ids: List<String>) = withContext(Dispatchers.IO) {
+        mediaDao.deleteByIds(ids)
+        // Also remove if last played
+        if (getLastPlayedVideoId() in ids) {
+            prefs.edit().remove("last_played_video_id").apply()
+        }
     }
 
     suspend fun rescanLocalMedia(): List<MediaItemEntity> = withContext(Dispatchers.IO) {
@@ -92,15 +124,12 @@ class MediaRepository(
             }
         } catch (_: Exception) {}
 
-        // 2. Add high quality demo clips to ensure immediate playback capability out of the box
-        val demoItems = getDemoVideoClips()
-        for (demo in demoItems) {
-            if (discovered.none { it.id == demo.id }) {
-                discovered.add(demo)
-            }
-        }
+        // Purge any legacy demo items from previous builds
+        mediaDao.purgeDemoItems()
 
-        mediaDao.insertAll(discovered)
+        if (discovered.isNotEmpty()) {
+            mediaDao.insertAll(discovered)
+        }
         discovered
     }
 
@@ -128,102 +157,5 @@ class MediaRepository(
         )
         mediaDao.insertOrUpdate(item)
         item
-    }
-
-    fun getDemoVideoClips(): List<MediaItemEntity> {
-        val now = System.currentTimeMillis()
-        return listOf(
-            MediaItemEntity(
-                id = "demo_flex_1",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                title = "Flex X Cop S02E01.1080p.WEBRip",
-                durationMs = 3600000L,
-                sizeBytes = 1450000000L,
-                resolution = "1920x1080",
-                folderName = "Flex X Cop Season 2",
-                lastPlayedTimestamp = now - 60000L,
-                playbackPositionMs = 245000L // 4m 05s resume position
-            ),
-            MediaItemEntity(
-                id = "demo_flex_2",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                title = "Flex X Cop S02E02.1080p.WEBRip",
-                durationMs = 3720000L,
-                sizeBytes = 1520000000L,
-                resolution = "1920x1080",
-                folderName = "Flex X Cop Season 2",
-                lastPlayedTimestamp = now - 120000L
-            ),
-            MediaItemEntity(
-                id = "demo_killers_1",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                title = "A Shop for Killers S01E01.720p",
-                durationMs = 3120000L,
-                sizeBytes = 950000000L,
-                resolution = "1280x720",
-                folderName = "A Shop for Killers",
-                lastPlayedTimestamp = now - 3600000L
-            ),
-            MediaItemEntity(
-                id = "demo_killers_2",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-                title = "A Shop for Killers S01E02.720p",
-                durationMs = 3280000L,
-                sizeBytes = 980000000L,
-                resolution = "1280x720",
-                folderName = "A Shop for Killers",
-                lastPlayedTimestamp = now - 7200000L
-            ),
-            MediaItemEntity(
-                id = "demo_levelup_1",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-                title = "Level Up S01 WEB-DL 720p Episode 1",
-                durationMs = 1480000L,
-                sizeBytes = 420000000L,
-                resolution = "1280x720",
-                folderName = "Level Up S01",
-                lastPlayedTimestamp = now - 86400000L
-            ),
-            MediaItemEntity(
-                id = "demo_whatsapp_1",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
-                title = "VID-20241020-WA0014",
-                durationMs = 45000L,
-                sizeBytes = 18000000L,
-                resolution = "1080x1920",
-                folderName = "WhatsApp Video",
-                lastPlayedTimestamp = now - 1800000L
-            ),
-            MediaItemEntity(
-                id = "demo_whatsapp_2",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
-                title = "VID-20241021-WA0022",
-                durationMs = 62000L,
-                sizeBytes = 22000000L,
-                resolution = "1080x1920",
-                folderName = "WhatsApp Video",
-                lastPlayedTimestamp = now - 2400000L
-            ),
-            MediaItemEntity(
-                id = "demo_sadness_1",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4",
-                title = "Love.In.Sadness.S01E08.720p.HDTV",
-                durationMs = 3400000L,
-                sizeBytes = 870000000L,
-                resolution = "1280x720",
-                folderName = "Love.In.Sadness",
-                lastPlayedTimestamp = now - 172800000L
-            ),
-            MediaItemEntity(
-                id = "demo_big_buck_bunny",
-                uri = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                title = "Big Buck Bunny (4K UltraHD Master)",
-                durationMs = 596000L,
-                sizeBytes = 158000000L,
-                resolution = "3840x2160",
-                folderName = "AM Showcase Clips",
-                lastPlayedTimestamp = now - 259200000L
-            )
-        )
     }
 }

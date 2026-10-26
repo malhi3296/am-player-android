@@ -38,7 +38,7 @@ class DefaultAppContainer(private val application: Application) : AppContainer {
     }
 
     override val iptvRepository: IptvRepository by lazy {
-        IptvRepository()
+        IptvRepository(application)
     }
 
     override val musicPlayerManager: MusicPlayerManager by lazy {

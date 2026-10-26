@@ -32,4 +32,10 @@ interface MediaDao {
 
     @Query("DELETE FROM media_items WHERE id = :id")
     suspend fun deleteById(id: String)
+
+    @Query("DELETE FROM media_items WHERE id IN (:ids)")
+    suspend fun deleteByIds(ids: List<String>)
+
+    @Query("DELETE FROM media_items WHERE id LIKE 'demo_%'")
+    suspend fun purgeDemoItems()
 }

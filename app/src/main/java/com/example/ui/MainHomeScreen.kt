@@ -110,9 +110,11 @@ fun MainHomeScreen(
             ) { tab ->
                 when (tab) {
                     BottomNavTab.HOME -> {
+                        val settings by container.settingsRepository.settings.collectAsState()
                         MediaLibraryScreen(
                             viewModel = libraryViewModel,
                             isDarkMode = isDarkMode,
+                            logoDarkModeOpacity = settings.logoDarkModeOpacity,
                             onToggleDarkMode = onToggleDarkMode,
                             onPlayMedia = onPlayMedia
                         )
@@ -122,6 +124,7 @@ fun MainHomeScreen(
                             tracks = musicTracks,
                             playerManager = container.musicPlayerManager,
                             musicRepository = container.musicRepository,
+                            settingsRepository = container.settingsRepository,
                             onRescan = {
                                 // Trigger rescan of audio
                             }

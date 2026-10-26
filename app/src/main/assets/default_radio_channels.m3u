@@ -1,0 +1,49 @@
+#EXTM3U
+
+# ==========================================
+# CATEGORY: NEWS & TALK RADIO
+# ==========================================
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/8Q9Z9XX.png" group-title="News & Talk Radio",BBC World Service (UK)
+http://stream.tvgarden.world/radio/bbc_world_service.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/7pW4z7v.png" group-title="News & Talk Radio",NPR News & Talk (US)
+http://stream.tvgarden.world/radio/npr_live.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/3N40z7v.png" group-title="News & Talk Radio",RFI Monde (France)
+http://stream.tvgarden.world/radio/rfi_monde.mp3
+
+# ==========================================
+# CATEGORY: POP & TOP 40 RADIO
+# ==========================================
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/1O2P3qR.png" group-title="Pop Radio",Capital FM 95.8 (London)
+http://stream.tvgarden.world/radio/capital_fm.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/5V4N3bC.png" group-title="Pop Radio",NRJ Hit Music Only (France)
+http://stream.tvgarden.world/radio/nrj_france.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/9P0Q1RS.png" group-title="Pop Radio",KIIS FM 102.7 (Los Angeles)
+http://stream.tvgarden.world/radio/kiis_fm.mp3
+
+# ==========================================
+# CATEGORY: JAZZ, CLASSICAL & CHILL
+# ==========================================
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/L1M2N3O.png" group-title="Jazz & Lounge",Classic FM UK
+http://stream.tvgarden.world/radio/classic_fm.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/2pL8K1m.png" group-title="Jazz & Lounge",Smooth Jazz Florida
+http://stream.tvgarden.world/radio/smooth_jazz.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/K9p1N2v.png" group-title="Jazz & Lounge",SomaFM Groove Salad
+http://stream.tvgarden.world/radio/groove_salad.mp3
+
+# ==========================================
+# CATEGORY: ROCK & ALTERNATIVE
+# ==========================================
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/A0L9U3e.png" group-title="Rock Radio",Absolute Radio (UK)
+http://stream.tvgarden.world/radio/absolute_radio.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/7gK9M3p.png" group-title="Rock Radio",Rock Antenne (Germany)
+http://stream.tvgarden.world/radio/rock_antenne.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/3T4U5V6.png" group-title="Rock Radio",KROQ 106.7 (Los Angeles)
+http://stream.tvgarden.world/radio/kroq.mp3
+
+# ==========================================
+# CATEGORY: ELECTRONIC & DANCE
+# ==========================================
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/8Z9A0B1.png" group-title="Electronic Radio",DI.FM Trance Channel
+http://stream.tvgarden.world/radio/difm_trance.mp3
+#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/4W5X6Y7.png" group-title="Electronic Radio",Ibiza Global Radio
+http://stream.tvgarden.world/radio/ibiza_global.mp3

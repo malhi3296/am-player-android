@@ -1,6 +1,7 @@
 package com.example.ui.library
 
 import android.Manifest
+import android.content.res.Configuration
 import android.os.Build
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -9,7 +10,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,20 +33,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Security
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material.icons.filled.Sort
-import androidx.compose.material.icons.filled.Splitscreen
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -54,7 +55,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -64,7 +64,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -74,11 +73,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import android.content.res.Configuration
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -90,22 +86,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.MediaItemEntity
-import com.example.ui.player.components.formatTime
 import com.example.ui.theme.AmAccentBlue
-import com.example.ui.theme.AmAccentBlueGlow
-import com.example.ui.theme.SaCardBg
-import com.example.ui.theme.SaDarkBg
-import com.example.ui.theme.SaFolderBadgeRed
-import com.example.ui.theme.SaFolderBlue
+import com.example.ui.theme.DangerRed
 import com.example.ui.vault.SecretVaultDialog
-
-// Lightest soft pink button color as requested by user
-private val LightestPinkFab = Color(0xFFFFD8E4)
 
 @Composable
 fun MediaLibraryScreen(
     viewModel: MediaLibraryViewModel,
     isDarkMode: Boolean,
+    logoDarkModeOpacity: Float = 1.0f,
     onToggleDarkMode: (Boolean) -> Unit,
     onPlayMedia: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -115,17 +104,17 @@ fun MediaLibraryScreen(
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
     val uiState by viewModel.uiState.collectAsState()
-    val allMedia by viewModel.allMedia.collectAsState()
-    val recentMedia by viewModel.recentMedia.collectAsState()
     val folders by viewModel.folders.collectAsState()
     val filteredMedia by viewModel.filteredMedia.collectAsState()
+    val lastVideo by viewModel.lastPlayedVideo.collectAsState()
     val allRawMedia by viewModel.allRawMedia.collectAsState()
 
     var showSearchField by remember { mutableStateOf(false) }
     var showSortDialog by remember { mutableStateOf(false) }
     var showSecretVaultDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
 
-    // 5-tap detection on top-right logo to open hidden locked video vault
+    // 5-tap detection on top-left logo to open hidden locked video vault
     var logoTapCount by remember { mutableIntStateOf(0) }
     var lastLogoTapTime by remember { mutableLongStateOf(0L) }
 
@@ -148,7 +137,6 @@ fun MediaLibraryScreen(
             logoTapCount = 0
             showSecretVaultDialog = true
         } else {
-            // Normal tap: if inside folder, navigate back to folders
             if (uiState.selectedFolder != null) {
                 viewModel.setSelectedFolder(null)
             }
@@ -163,23 +151,13 @@ fun MediaLibraryScreen(
         viewModel.setPermissionGranted(granted)
     }
 
-    LaunchedEffect(Unit) {
-        val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            arrayOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_AUDIO)
+    BackHandler(enabled = uiState.selectedFolder != null || uiState.isSelectionMode) {
+        if (uiState.isSelectionMode) {
+            viewModel.toggleSelectionMode(false)
         } else {
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+            viewModel.setSelectedFolder(null)
         }
-        permissionLauncher.launch(perms)
     }
-
-    // Handle back button when navigating inside a folder
-    BackHandler(enabled = uiState.selectedFolder != null) {
-        viewModel.setSelectedFolder(null)
-    }
-
-    // Determine the last played video to resume from floating button
-    val lastVideo = recentMedia.firstOrNull() ?: allMedia.firstOrNull()
-    val activeFolder = uiState.selectedFolder ?: (lastVideo?.folderName ?: "All Videos")
 
     Box(
         modifier = modifier
@@ -187,70 +165,144 @@ fun MediaLibraryScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
-            // TOP BAR: Logo on left, action icons, and top-right AM logo (5-tap opens Secret Vault)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Top-left logo (white with 50% opacity in dark mode, also triggers secret tap counter)
-                Image(
-                    painter = painterResource(id = R.drawable.am_player_logo),
-                    contentDescription = "AM Player Logo",
-                    colorFilter = if (isDarkMode) ColorFilter.tint(Color.White) else null,
+            // TOP BAR
+            if (uiState.isSelectionMode) {
+                // Selection Mode Top Bar
+                Row(
                     modifier = Modifier
-                        .height(34.dp)
-                        .then(if (isDarkMode) Modifier.alpha(0.5f) else Modifier)
-                        .clickable { onLogoClick() }
-                        .testTag("app_logo")
-                )
-
-                // Actions: Search, View Mode (Grid/List), Sort Options, Dark/Light Toggle, and Top-Right Logo
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = { showSearchField = !showSearchField },
-                        modifier = Modifier.testTag("search_toggle_button")
-                    ) {
-                        Icon(
-                            imageVector = if (showSearchField) Icons.Default.Clear else Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = if (showSearchField) AmAccentBlue else MaterialTheme.colorScheme.onBackground
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.toggleSelectionMode(false) }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cancel Selection", tint = MaterialTheme.colorScheme.onBackground)
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "${uiState.selectedVideoIds.size} Selected",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
 
-                    IconButton(
-                        onClick = { viewModel.toggleViewMode() },
-                        modifier = Modifier.testTag("toggle_view_mode_button")
-                    ) {
-                        Icon(
-                            imageVector = if (uiState.viewMode == ViewMode.GRID) Icons.Default.Splitscreen else Icons.Default.GridView,
-                            contentDescription = "Toggle Grid or List View",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { viewModel.selectAllVideos(filteredMedia.map { it.id }) }) {
+                            Icon(Icons.Default.SelectAll, contentDescription = "Select All", tint = MaterialTheme.colorScheme.onBackground)
+                        }
+                        if (uiState.selectedVideoIds.isNotEmpty()) {
+                            IconButton(onClick = { showDeleteConfirmDialog = true }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = DangerRed)
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Standard Top Bar
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    if (uiState.selectedFolder == null) {
+                        // Root Library Header with logo
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clickable { onLogoClick() }
+                                .testTag("top_left_app_logo")
+                        ) {
+                            Image(
+                                painter = painterResource(id = R.drawable.am_player_logo),
+                                contentDescription = "AM Player Logo",
+                                alpha = if (isDarkMode) logoDarkModeOpacity else 1.0f,
+                                modifier = Modifier
+                                    .size(38.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "AM Player",
+                                fontSize = 21.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                    } else {
+                        // Inside Folder Header (clean, no duplicate folder box, just back arrow and name)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { viewModel.setSelectedFolder(null) }) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = uiState.selectedFolder ?: "",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
 
-                    IconButton(
-                        onClick = { showSortDialog = true },
-                        modifier = Modifier.testTag("sort_options_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Sort,
-                            contentDescription = "Sort Options",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
+                    // Top Action Icons
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Search
+                        IconButton(
+                            onClick = { showSearchField = !showSearchField },
+                            modifier = Modifier.testTag("action_search_toggle")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Search,
+                                contentDescription = "Search",
+                                tint = if (showSearchField) AmAccentBlue else MaterialTheme.colorScheme.onBackground
+                            )
+                        }
 
-                    IconButton(
-                        onClick = { onToggleDarkMode(!isDarkMode) },
-                        modifier = Modifier.testTag("dark_mode_toggle_button")
-                    ) {
-                        Icon(
-                            imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = "Toggle Dark/Light Mode",
-                            tint = if (isDarkMode) Color(0xFFFFD54F) else AmAccentBlue
-                        )
+                        // Grid / List Toggle
+                        IconButton(
+                            onClick = { viewModel.toggleViewMode() },
+                            modifier = Modifier.testTag("action_toggle_view_mode")
+                        ) {
+                            Icon(
+                                imageVector = if (uiState.viewMode == ViewMode.GRID) Icons.Default.ViewList else Icons.Default.GridView,
+                                contentDescription = "Toggle Grid / List View",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
+                        // Sort Options
+                        IconButton(
+                            onClick = { showSortDialog = true },
+                            modifier = Modifier.testTag("action_sort_options")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = "Sort",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+
+                        // Dark/Light Theme Toggle (Just toggle icon from sun to moon cleanly with white icon)
+                        IconButton(
+                            onClick = { onToggleDarkMode(!isDarkMode) },
+                            modifier = Modifier.testTag("action_toggle_theme")
+                        ) {
+                            Icon(
+                                imageVector = if (isDarkMode) Icons.Default.LightMode else Icons.Default.DarkMode,
+                                contentDescription = "Toggle Theme",
+                                tint = if (isDarkMode) Color.White else MaterialTheme.colorScheme.onBackground
+                            )
+                        }
                     }
                 }
             }
@@ -311,7 +363,7 @@ fun MediaLibraryScreen(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                             Text(
-                                text = "Allow AM Player to access videos and audio on device.",
+                                text = "Allow AM Player to access videos on device.",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -334,41 +386,9 @@ fun MediaLibraryScreen(
                 }
             }
 
-            // Folder Header if navigated inside a folder
-            if (uiState.selectedFolder != null) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { viewModel.setSelectedFolder(null) }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back to Folders",
-                            tint = MaterialTheme.colorScheme.onBackground
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Column {
-                        Text(
-                            text = uiState.selectedFolder ?: "",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground
-                        )
-                        Text(
-                            text = "${filteredMedia.size} Videos in folder",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Main Content Area: Folders (Grid or List) OR Videos inside selected folder
+            // MAIN CONTENT: Folders View OR Videos Inside Folder View
             if (uiState.selectedFolder == null) {
-                // Root view: Displays folders
+                // ROOT VIEW: Folders
                 if (folders.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -380,24 +400,24 @@ fun MediaLibraryScreen(
                             Icon(
                                 imageVector = Icons.Default.Folder,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(56.dp)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                modifier = Modifier.size(52.dp)
                             )
                             Spacer(modifier = Modifier.height(10.dp))
                             Text(
-                                text = if (uiState.searchQuery.isNotBlank()) "No matching folders found" else "No video folders found",
+                                text = if (uiState.searchQuery.isNotBlank()) "No matching folders found" else "No video folders on device",
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 } else if (uiState.viewMode == ViewMode.GRID) {
-                    // Folder Grid: 3 columns in portrait, 6 columns in landscape for compact, neat folder cards
+                    // Folder Grid: 3 columns portrait, 6 columns landscape
                     LazyVerticalGrid(
                         columns = if (isLandscape) GridCells.Fixed(6) else GridCells.Fixed(3),
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                         horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 10.dp else 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(if (isLandscape) 12.dp else 18.dp),
+                        verticalArrangement = Arrangement.spacedBy(if (isLandscape) 12.dp else 16.dp),
                         modifier = Modifier
                             .fillMaxSize()
                             .testTag("sa_folder_grid")
@@ -406,12 +426,13 @@ fun MediaLibraryScreen(
                             SaFolderGridItem(
                                 folder = folder,
                                 isLandscape = isLandscape,
+                                isDarkMode = isDarkMode,
                                 onClick = { viewModel.setSelectedFolder(folder.name) }
                             )
                         }
                     }
                 } else {
-                    // Vertical Folder List View (FIXES the bug where List mode was showing videos instead of folders!)
+                    // Folder List View
                     LazyColumn(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -422,13 +443,14 @@ fun MediaLibraryScreen(
                         items(folders, key = { it.name }) { folder ->
                             SaFolderListItem(
                                 folder = folder,
+                                isDarkMode = isDarkMode,
                                 onClick = { viewModel.setSelectedFolder(folder.name) }
                             )
                         }
                     }
                 }
             } else {
-                // Inside a selected folder: Displays videos
+                // INSIDE FOLDER: Videos (Respects Grid or List view mode!)
                 if (filteredMedia.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -442,7 +464,41 @@ fun MediaLibraryScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+                } else if (uiState.viewMode == ViewMode.GRID) {
+                    // Videos Grid View
+                    LazyVerticalGrid(
+                        columns = if (isLandscape) GridCells.Fixed(4) else GridCells.Fixed(2),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .testTag("folder_videos_grid")
+                    ) {
+                        items(filteredMedia, key = { it.id }) { item ->
+                            val isSelected = item.id in uiState.selectedVideoIds
+                            SaVideoGridItem(
+                                item = item,
+                                isSelectionMode = uiState.isSelectionMode,
+                                isSelected = isSelected,
+                                isDarkMode = isDarkMode,
+                                onClick = {
+                                    if (uiState.isSelectionMode) {
+                                        viewModel.toggleVideoSelection(item.id)
+                                    } else {
+                                        viewModel.recordVideoClick(item.id)
+                                        onPlayMedia(item.id)
+                                    }
+                                },
+                                onLongClick = {
+                                    viewModel.toggleSelectionMode(true)
+                                    viewModel.toggleVideoSelection(item.id)
+                                }
+                            )
+                        }
+                    }
                 } else {
+                    // Videos List View
                     LazyColumn(
                         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -451,9 +507,23 @@ fun MediaLibraryScreen(
                             .testTag("folder_videos_list")
                     ) {
                         items(filteredMedia, key = { it.id }) { item ->
+                            val isSelected = item.id in uiState.selectedVideoIds
                             SaVideoListItem(
                                 item = item,
-                                onClick = { onPlayMedia(item.id) }
+                                isSelectionMode = uiState.isSelectionMode,
+                                isSelected = isSelected,
+                                onClick = {
+                                    if (uiState.isSelectionMode) {
+                                        viewModel.toggleVideoSelection(item.id)
+                                    } else {
+                                        viewModel.recordVideoClick(item.id)
+                                        onPlayMedia(item.id)
+                                    }
+                                },
+                                onLongClick = {
+                                    viewModel.toggleSelectionMode(true)
+                                    viewModel.toggleVideoSelection(item.id)
+                                }
                             )
                         }
                     }
@@ -461,58 +531,30 @@ fun MediaLibraryScreen(
             }
         }
 
-        // Floating Action Button: Lightest pink button directly above settings with play icon & accent color
-        if (lastVideo != null) {
-            Column(
+        // REDESIGNED FLOATING ACTION BUTTON (Recently Played Video)
+        // a) No text on top of button
+        // b) Button circle is accent color, and play icon is pure white for both dark and light mode
+        if (lastVideo != null && !uiState.isSelectionMode) {
+            FloatingActionButton(
+                onClick = {
+                    viewModel.recordVideoClick(lastVideo!!.id)
+                    onPlayMedia(lastVideo!!.id)
+                },
+                containerColor = AmAccentBlue,
+                contentColor = Color.White,
+                shape = CircleShape,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp, bottom = 20.dp),
-                horizontalAlignment = Alignment.End
+                    .padding(end = 20.dp, bottom = 20.dp)
+                    .size(58.dp)
+                    .testTag("resume_last_video_fab")
             ) {
-                // Active folder indicator pill above the play button
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue.copy(alpha = 0.4f)),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(AmAccentBlue)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Active: $activeFolder",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-
-                // Squircle FAB: Lightest pink button with play icon in accent color (#4D6BFE)
-                FloatingActionButton(
-                    onClick = { onPlayMedia(lastVideo.id) },
-                    containerColor = LightestPinkFab, // Lightest pink (#FFD8E4)
-                    contentColor = AmAccentBlue, // Accent color
-                    shape = RoundedCornerShape(22.dp),
-                    modifier = Modifier
-                        .size(62.dp)
-                        .testTag("resume_last_video_fab")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Resume Last Video",
-                        tint = AmAccentBlue, // Accent color play icon
-                        modifier = Modifier.size(34.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Resume Video",
+                    tint = Color.White,
+                    modifier = Modifier.size(34.dp)
+                )
             }
         }
 
@@ -526,7 +568,7 @@ fun MediaLibraryScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Sort, contentDescription = null, tint = AmAccentBlue)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Sort Folders & Videos", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                        Text("Sort By", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     }
                 },
                 text = {
@@ -565,19 +607,51 @@ fun MediaLibraryScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showSortDialog = false }) {
-                        Text("Done", color = AmAccentBlue, fontWeight = FontWeight.Bold)
+                        Text("Close", color = AmAccentBlue)
                     }
                 }
             )
         }
 
-        // Secret Vault Dialog (opened after 5 taps on the logo)
+        // Delete Confirmation Dialog
+        if (showDeleteConfirmDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirmDialog = false },
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(20.dp),
+                title = {
+                    Text("Delete Selected Videos?", fontWeight = FontWeight.Bold)
+                },
+                text = {
+                    Text("Are you sure you want to delete ${uiState.selectedVideoIds.size} video(s)? This action cannot be undone.")
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteSelectedVideos()
+                            showDeleteConfirmDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                    ) {
+                        Text("Delete", color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        // Secret Vault Dialog (PIN Protected, with subfolders support)
         if (showSecretVaultDialog) {
             SecretVaultDialog(
                 vaultRepository = viewModel.vaultRepository,
                 allAvailableMedia = allRawMedia,
                 onPlayMedia = { videoId ->
                     showSecretVaultDialog = false
+                    viewModel.recordVideoClick(videoId)
                     onPlayMedia(videoId)
                 },
                 onDismiss = { showSecretVaultDialog = false }
@@ -587,12 +661,17 @@ fun MediaLibraryScreen(
 }
 
 /**
- * 3-Column Folder Card matching sa.jpg with recent folder highlight
+ * Minimalist Folder Grid Item
+ * - Background: Transparent (or White in light mode)
+ * - Icon: Accent color, size 38dp portrait, 26dp landscape
+ * - Red dot on top-right for recent video (no border or highlight)
+ * - Video count under folder name (no red badge)
  */
 @Composable
 private fun SaFolderGridItem(
     folder: FolderUiModel,
     isLandscape: Boolean = false,
+    isDarkMode: Boolean = true,
     onClick: () -> Unit
 ) {
     Column(
@@ -601,112 +680,55 @@ private fun SaFolderGridItem(
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
-        val cornerRadius = if (isLandscape) 12.dp else 20.dp
-        val iconSize = if (isLandscape) 32.dp else 54.dp
+        val iconSize = if (isLandscape) 26.dp else 38.dp
+        val cornerRadius = if (isLandscape) 12.dp else 16.dp
 
-        // Rounded dark square box containing the folder icon
+        // Transparent / clean card box
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(cornerRadius))
-                .background(
-                    if (folder.hasRecentVideo) AmAccentBlue.copy(alpha = 0.12f) else SaCardBg
-                )
-                .then(
-                    if (folder.hasRecentVideo) {
-                        Modifier.border(
-                            if (isLandscape) 1.dp else 1.5.dp,
-                            AmAccentBlue.copy(alpha = 0.85f),
-                            RoundedCornerShape(cornerRadius)
-                        )
-                    } else {
-                        Modifier
-                    }
-                ),
+                .background(if (isDarkMode) Color.Transparent else Color.White),
             contentAlignment = Alignment.Center
         ) {
-            // Folder icon in soft sky blue (matching sa.jpg)
+            // Folder icon in accent color
             Icon(
                 imageVector = Icons.Default.Folder,
                 contentDescription = folder.name,
-                tint = if (folder.hasRecentVideo) AmAccentBlue else SaFolderBlue,
+                tint = AmAccentBlue,
                 modifier = Modifier.size(iconSize)
             )
 
-            // Red badge on top right with number
-            if (folder.badgeNumber != null && folder.badgeNumber > 0) {
-                Surface(
-                    shape = RoundedCornerShape(if (isLandscape) 4.dp else 6.dp),
-                    color = SaFolderBadgeRed,
+            // Very small red dot on top right for recent video (Requirement 20)
+            if (folder.hasRecentVideo) {
+                Box(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = if (isLandscape) 6.dp else 10.dp, end = if (isLandscape) 6.dp else 10.dp)
-                ) {
-                    Text(
-                        text = "${folder.badgeNumber}",
-                        fontSize = if (isLandscape) 9.sp else 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        modifier = Modifier.padding(
-                            horizontal = if (isLandscape) 4.dp else 6.dp,
-                            vertical = if (isLandscape) 1.dp else 2.dp
-                        )
-                    )
-                }
-            }
-
-            // Subtle "RECENT" pill indicator for folder containing recently played video
-            if (folder.hasRecentVideo) {
-                Surface(
-                    shape = RoundedCornerShape(if (isLandscape) 3.dp else 4.dp),
-                    color = AmAccentBlue,
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = if (isLandscape) 4.dp else 6.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(
-                            horizontal = if (isLandscape) 4.dp else 6.dp,
-                            vertical = if (isLandscape) 1.dp else 2.dp
-                        ),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.History,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(if (isLandscape) 7.dp else 9.dp)
-                        )
-                        Spacer(modifier = Modifier.width(if (isLandscape) 2.dp else 3.dp))
-                        Text(
-                            text = "RECENT",
-                            fontSize = if (isLandscape) 7.sp else 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
+                        .padding(top = 10.dp, end = 10.dp)
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFEF4444))
+                )
             }
         }
 
-        Spacer(modifier = Modifier.height(if (isLandscape) 4.dp else 8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
         // Folder Title
         Text(
             text = folder.name,
             fontSize = if (isLandscape) 11.sp else 12.sp,
-            fontWeight = if (folder.hasRecentVideo) FontWeight.Bold else FontWeight.Medium,
-            color = if (folder.hasRecentVideo) AmAccentBlue else MaterialTheme.colorScheme.onBackground,
-            maxLines = if (isLandscape) 1 else 2,
+            fontWeight = FontWeight.Medium,
+            color = MaterialTheme.colorScheme.onBackground,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            lineHeight = if (isLandscape) 13.sp else 16.sp
+            textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(if (isLandscape) 1.dp else 2.dp))
+        Spacer(modifier = Modifier.height(1.dp))
 
-        // Video Count
+        // Video Count (Text only, no red badge)
         Text(
             text = "${folder.videoCount} Videos",
             fontSize = if (isLandscape) 10.sp else 11.sp,
@@ -717,175 +739,44 @@ private fun SaFolderGridItem(
 }
 
 /**
- * Vertical Folder List Item used when user toggles to LIST view for folders
+ * Vertical Folder List Item
  */
 @Composable
 private fun SaFolderListItem(
     folder: FolderUiModel,
+    isDarkMode: Boolean = true,
     onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (folder.hasRecentVideo) AmAccentBlue.copy(alpha = 0.08f) else MaterialTheme.colorScheme.surfaceVariant,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (folder.hasRecentVideo) AmAccentBlue.copy(alpha = 0.8f) else MaterialTheme.colorScheme.outline
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SaCardBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Folder,
-                    contentDescription = null,
-                    tint = if (folder.hasRecentVideo) AmAccentBlue else SaFolderBlue,
-                    modifier = Modifier.size(28.dp)
-                )
-
-                if (folder.badgeNumber != null && folder.badgeNumber > 0) {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = SaFolderBadgeRed,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(2.dp)
-                    ) {
-                        Text(
-                            text = "${folder.badgeNumber}",
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = folder.name,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    if (folder.hasRecentVideo) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = AmAccentBlue.copy(alpha = 0.2f),
-                            modifier = Modifier.padding(start = 4.dp)
-                        ) {
-                            Text(
-                                text = "RECENT ACTIVITY",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AmAccentBlue,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                val formattedSize = if (folder.totalSizeBytes > 0) {
-                    " • ${(folder.totalSizeBytes / (1024 * 1024))} MB"
-                } else ""
-
-                Text(
-                    text = "${folder.videoCount} Videos$formattedSize",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Icon(
-                imageVector = Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SaVideoListItem(
-    item: MediaItemEntity,
-    onClick: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(14.dp),
+        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.White,
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Thumbnail
             Box(
-                modifier = Modifier
-                    .size(width = 86.dp, height = 58.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(Color(0xFF1E1E26)),
+                modifier = Modifier.size(36.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Movie,
+                    imageVector = Icons.Default.Folder,
                     contentDescription = null,
-                    tint = SaFolderBlue.copy(alpha = 0.8f),
+                    tint = AmAccentBlue,
                     modifier = Modifier.size(28.dp)
                 )
 
-                if (item.durationMs > 0) {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = Color.Black.copy(alpha = 0.8f),
+                if (folder.hasRecentVideo) {
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(4.dp)
-                    ) {
-                        Text(
-                            text = formatTime(item.durationMs),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
-                }
-
-                if (item.durationMs > 0 && item.playbackPositionMs > 0) {
-                    val progress = (item.playbackPositionMs.toFloat() / item.durationMs.toFloat()).coerceIn(0f, 1f)
-                    LinearProgressIndicator(
-                        progress = { progress },
-                        color = AmAccentBlue,
-                        trackColor = Color.Transparent,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(3.dp)
-                            .align(Alignment.BottomCenter)
+                            .align(Alignment.TopEnd)
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEF4444))
                     )
                 }
             }
@@ -894,54 +785,151 @@ private fun SaVideoListItem(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.title,
+                    text = folder.name,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Text(
+                    text = "${folder.videoCount} Videos",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
 
-                Spacer(modifier = Modifier.height(4.dp))
+/**
+ * Video Item in Grid View: Clean thumbnail + Video Title ONLY (Requirement 36)
+ */
+@Composable
+private fun SaVideoGridItem(
+    item: MediaItemEntity,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    isDarkMode: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.White,
+        border = androidx.compose.foundation.BorderStroke(
+            if (isSelected) 2.dp else 1.dp,
+            if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.outline
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1.6f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1E1E26)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Movie,
+                    contentDescription = null,
+                    tint = AmAccentBlue.copy(alpha = 0.7f),
+                    modifier = Modifier.size(32.dp)
+                )
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (item.resolution.isNotBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = AmAccentBlue.copy(alpha = 0.2f),
-                            modifier = Modifier.padding(end = 6.dp)
-                        ) {
-                            Text(
-                                text = if (item.resolution.contains("3840")) "4K" else if (item.resolution.contains("1920")) "1080p" else item.resolution,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AmAccentBlue,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                            )
-                        }
-                    }
-
-                    Text(
-                        text = item.folderName,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                if (isSelectionMode) {
+                    Icon(
+                        imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                        contentDescription = null,
+                        tint = if (isSelected) AmAccentBlue else Color.White,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(6.dp)
+                            .size(22.dp)
                     )
                 }
             }
 
-            Surface(
-                shape = CircleShape,
-                color = AmAccentBlue.copy(alpha = 0.15f),
-                modifier = Modifier.size(36.dp)
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Video Name ONLY (Requirement 36)
+            Text(
+                text = item.title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Video Item in List View: Clean row with Thumbnail + Video Title ONLY (Requirement 36)
+ */
+@Composable
+private fun SaVideoListItem(
+    item: MediaItemEntity,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        border = androidx.compose.foundation.BorderStroke(
+            if (isSelected) 1.5.dp else 1.dp,
+            if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.outline
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(width = 64.dp, height = 44.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFF1E1E26)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Play",
-                        tint = AmAccentBlue,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Movie,
+                    contentDescription = null,
+                    tint = AmAccentBlue.copy(alpha = 0.8f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Video Name ONLY (Requirement 36)
+            Text(
+                text = item.title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+
+            if (isSelectionMode) {
+                Icon(
+                    imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                    contentDescription = null,
+                    tint = if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

@@ -1,7 +1,6 @@
 package com.example.ui.vault
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,7 +26,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Backspace
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Fingerprint
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.DriveFileMove
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
@@ -34,16 +36,15 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -92,8 +93,8 @@ fun SecretVaultDialog(
 ) {
     val context = LocalContext.current
     val isConfigured by vaultRepository.isVaultConfigured.collectAsState()
-    val isBiometricEnabled by vaultRepository.isBiometricEnabled.collectAsState()
     val hiddenIds by vaultRepository.hiddenVideoIds.collectAsState()
+    val vaultFolders by vaultRepository.vaultFolders.collectAsState()
 
     var screenState by remember(isConfigured) {
         mutableStateOf(if (isConfigured) VaultScreenState.ENTER_PIN else VaultScreenState.SETUP_PIN)
@@ -102,8 +103,11 @@ fun SecretVaultDialog(
     var pinInput by remember { mutableStateOf("") }
     var pinSetupFirst by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var enableBiometricInSetup by remember { mutableStateOf(true) }
     var showAddVideosSheet by remember { mutableStateOf(false) }
+    var showCreateFolderDialog by remember { mutableStateOf(false) }
+    var newFolderName by remember { mutableStateOf("") }
+    var selectedVaultFolder by remember { mutableStateOf("All") }
+    var videoToMove by remember { mutableStateOf<MediaItemEntity?>(null) }
 
     val hiddenVideos = remember(allAvailableMedia, hiddenIds) {
         allAvailableMedia.filter { hiddenIds.contains(it.id) }
@@ -158,7 +162,7 @@ fun SecretVaultDialog(
                                 color = Color.White
                             )
                             Text(
-                                text = "Locked & Hidden Videos",
+                                text = "PIN Protected & Hidden Folders",
                                 fontSize = 11.sp,
                                 color = Color(0xFF9E9EA7)
                             )
@@ -184,10 +188,9 @@ fun SecretVaultDialog(
                         VaultScreenState.ENTER_PIN -> {
                             PinEntryView(
                                 title = "Enter Vault PIN",
-                                subtitle = "Enter your 4-digit PIN to access locked videos",
+                                subtitle = "Enter your 4-digit PIN to access private folders",
                                 pin = pinInput,
                                 errorMessage = errorMessage,
-                                showBiometric = isBiometricEnabled,
                                 onDigit = { digit ->
                                     if (pinInput.length < 4) {
                                         val newPin = pinInput + digit
@@ -209,12 +212,6 @@ fun SecretVaultDialog(
                                         pinInput = pinInput.dropLast(1)
                                         errorMessage = null
                                     }
-                                },
-                                onBiometricClick = {
-                                    // Direct biometric unlock simulation / authentication
-                                    Toast.makeText(context, "Biometric authentication verified", Toast.LENGTH_SHORT).show()
-                                    screenState = VaultScreenState.VAULT_CONTENT
-                                    errorMessage = null
                                 }
                             )
                         }
@@ -226,10 +223,9 @@ fun SecretVaultDialog(
                             ) {
                                 PinEntryView(
                                     title = "Set Vault PIN",
-                                    subtitle = "Choose a 4-digit PIN to secure your hidden folder",
+                                    subtitle = "Choose a 4-digit PIN to secure your vault",
                                     pin = pinInput,
                                     errorMessage = errorMessage,
-                                    showBiometric = false,
                                     onDigit = { digit ->
                                         if (pinInput.length < 4) {
                                             val newPin = pinInput + digit
@@ -247,8 +243,7 @@ fun SecretVaultDialog(
                                             pinInput = pinInput.dropLast(1)
                                             errorMessage = null
                                         }
-                                    },
-                                    onBiometricClick = {}
+                                    }
                                 )
                             }
                         }
@@ -263,7 +258,6 @@ fun SecretVaultDialog(
                                     subtitle = "Re-enter your 4-digit PIN to confirm",
                                     pin = pinInput,
                                     errorMessage = errorMessage,
-                                    showBiometric = false,
                                     onDigit = { digit ->
                                         if (pinInput.length < 4) {
                                             val newPin = pinInput + digit
@@ -271,7 +265,7 @@ fun SecretVaultDialog(
                                             errorMessage = null
                                             if (newPin.length == 4) {
                                                 if (newPin == pinSetupFirst) {
-                                                    vaultRepository.setupVault(newPin, enableBiometricInSetup)
+                                                    vaultRepository.setupVault(newPin)
                                                     Toast.makeText(context, "Secret Vault configured successfully!", Toast.LENGTH_SHORT).show()
                                                     screenState = VaultScreenState.VAULT_CONTENT
                                                     pinInput = ""
@@ -288,65 +282,25 @@ fun SecretVaultDialog(
                                             pinInput = pinInput.dropLast(1)
                                             errorMessage = null
                                         }
-                                    },
-                                    onBiometricClick = {}
-                                )
-
-                                Spacer(modifier = Modifier.height(16.dp))
-
-                                Surface(
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = SaCardBg,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = Icons.Default.Fingerprint,
-                                                contentDescription = null,
-                                                tint = AmAccentBlue,
-                                                modifier = Modifier.size(24.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
-                                                Text(
-                                                    text = "Use System Biometrics",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = Color.White
-                                                )
-                                                Text(
-                                                    text = "Unlock with fingerprint or face",
-                                                    fontSize = 11.sp,
-                                                    color = Color(0xFF9E9EA7)
-                                                )
-                                            }
-                                        }
-                                        Switch(
-                                            checked = enableBiometricInSetup,
-                                            onCheckedChange = { enableBiometricInSetup = it },
-                                            colors = SwitchDefaults.colors(
-                                                checkedThumbColor = Color.White,
-                                                checkedTrackColor = AmAccentBlue
-                                            )
-                                        )
                                     }
-                                }
+                                )
                             }
                         }
 
                         VaultScreenState.VAULT_CONTENT -> {
                             VaultContentView(
+                                vaultRepository = vaultRepository,
                                 hiddenVideos = hiddenVideos,
+                                vaultFolders = vaultFolders,
+                                selectedFolder = selectedVaultFolder,
+                                onSelectFolder = { selectedVaultFolder = it },
+                                onCreateFolderClick = { showCreateFolderDialog = true },
                                 onPlayVideo = onPlayMedia,
                                 onUnhideVideo = { videoId ->
                                     vaultRepository.unhideVideo(videoId)
                                     Toast.makeText(context, "Video restored to library", Toast.LENGTH_SHORT).show()
                                 },
+                                onMoveVideoClick = { video -> videoToMove = video },
                                 onOpenAddVideos = { showAddVideosSheet = true },
                                 onResetPin = {
                                     screenState = VaultScreenState.SETUP_PIN
@@ -361,7 +315,103 @@ fun SecretVaultDialog(
         }
     }
 
-    // Modal Sheet / Dialog to add public videos to the secret vault
+    // Dialog: Create Folder inside Vault
+    if (showCreateFolderDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showCreateFolderDialog = false
+                newFolderName = ""
+            },
+            title = { Text("New Vault Folder", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Enter a name for the new folder inside your vault:", color = Color(0xFF9E9EA7), fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = newFolderName,
+                        onValueChange = { newFolderName = it },
+                        placeholder = { Text("Folder Name", color = Color.Gray) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (newFolderName.isNotBlank()) {
+                            vaultRepository.createVaultFolder(newFolderName.trim())
+                            selectedVaultFolder = newFolderName.trim()
+                            showCreateFolderDialog = false
+                            newFolderName = ""
+                            Toast.makeText(context, "Folder created", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue)
+                ) {
+                    Text("Create", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showCreateFolderDialog = false
+                    newFolderName = ""
+                }) {
+                    Text("Cancel", color = Color(0xFF9E9EA7))
+                }
+            },
+            containerColor = SaCardBgElevated
+        )
+    }
+
+    // Dialog: Move video to a vault folder
+    if (videoToMove != null) {
+        val targetVideo = videoToMove!!
+        AlertDialog(
+            onDismissRequest = { videoToMove = null },
+            title = { Text("Move to Folder", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Select vault folder for \"${targetVideo.title}\":", color = Color(0xFF9E9EA7), fontSize = 13.sp)
+                    vaultFolders.forEach { folder ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (vaultRepository.getVideoVaultFolder(targetVideo.id) == folder) AmAccentBlue.copy(alpha = 0.25f) else SaCardBg,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (vaultRepository.getVideoVaultFolder(targetVideo.id) == folder) AmAccentBlue else Color(0xFF2E2E36)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    vaultRepository.setVideoVaultFolder(targetVideo.id, folder)
+                                    Toast.makeText(context, "Moved to $folder", Toast.LENGTH_SHORT).show()
+                                    videoToMove = null
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Folder, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(20.dp))
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(folder, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { videoToMove = null }) {
+                    Text("Cancel", color = Color(0xFF9E9EA7))
+                }
+            },
+            containerColor = SaCardBgElevated
+        )
+    }
+
+    // Modal Sheet: Add public videos to vault
     if (showAddVideosSheet) {
         Dialog(onDismissRequest = { showAddVideosSheet = false }) {
             Surface(
@@ -446,10 +496,11 @@ fun SecretVaultDialog(
                                             )
                                         }
 
+                                        val destFolder = if (selectedVaultFolder != "All") selectedVaultFolder else "General"
                                         Button(
                                             onClick = {
-                                                vaultRepository.hideVideo(video.id)
-                                                Toast.makeText(context, "Locked to Secret Vault", Toast.LENGTH_SHORT).show()
+                                                vaultRepository.hideVideo(video.id, destFolder)
+                                                Toast.makeText(context, "Locked to '$destFolder'", Toast.LENGTH_SHORT).show()
                                             },
                                             shape = RoundedCornerShape(8.dp),
                                             colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue)
@@ -491,10 +542,8 @@ private fun PinEntryView(
     subtitle: String,
     pin: String,
     errorMessage: String?,
-    showBiometric: Boolean,
     onDigit: (String) -> Unit,
-    onBackspace: () -> Unit,
-    onBiometricClick: () -> Unit
+    onBackspace: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -551,12 +600,12 @@ private fun PinEntryView(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Numeric Keypad (1 to 9, Biometric/Clear, 0, Backspace)
+        // Numeric Keypad (1 to 9, Clear, 0, Backspace)
         val keys = listOf(
             listOf("1", "2", "3"),
             listOf("4", "5", "6"),
             listOf("7", "8", "9"),
-            listOf(if (showBiometric) "BIO" else "", "0", "DEL")
+            listOf("C", "0", "DEL")
         )
 
         Column(
@@ -576,17 +625,19 @@ private fun PinEntryView(
                                 .weight(1f)
                                 .height(60.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(if (key.isNotBlank()) SaCardBg else Color.Transparent)
-                                .border(
-                                    1.dp,
-                                    if (key.isNotBlank()) Color(0xFF2A2A34) else Color.Transparent,
-                                    RoundedCornerShape(16.dp)
-                                )
-                                .clickable(enabled = key.isNotBlank()) {
+                                .background(SaCardBg)
+                                .border(1.dp, Color(0xFF2A2A34), RoundedCornerShape(16.dp))
+                                .clickable {
                                     when (key) {
                                         "DEL" -> onBackspace()
-                                        "BIO" -> onBiometricClick()
-                                        else -> if (key.isNotBlank()) onDigit(key)
+                                        "C" -> {
+                                            var count = pin.length
+                                            while (count > 0) {
+                                                onBackspace()
+                                                count--
+                                            }
+                                        }
+                                        else -> onDigit(key)
                                     }
                                 },
                             contentAlignment = Alignment.Center
@@ -598,11 +649,11 @@ private fun PinEntryView(
                                     tint = Color.White,
                                     modifier = Modifier.size(22.dp)
                                 )
-                                "BIO" -> Icon(
-                                    imageVector = Icons.Default.Fingerprint,
-                                    contentDescription = "Biometric",
-                                    tint = AmAccentBlue,
-                                    modifier = Modifier.size(28.dp)
+                                "C" -> Text(
+                                    text = "C",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF9E9EA7)
                                 )
                                 else -> Text(
                                     text = key,
@@ -621,12 +672,26 @@ private fun PinEntryView(
 
 @Composable
 private fun VaultContentView(
+    vaultRepository: VaultRepository,
     hiddenVideos: List<MediaItemEntity>,
+    vaultFolders: Set<String>,
+    selectedFolder: String,
+    onSelectFolder: (String) -> Unit,
+    onCreateFolderClick: () -> Unit,
     onPlayVideo: (String) -> Unit,
     onUnhideVideo: (String) -> Unit,
+    onMoveVideoClick: (MediaItemEntity) -> Unit,
     onOpenAddVideos: () -> Unit,
     onResetPin: () -> Unit
 ) {
+    val displayedVideos = remember(hiddenVideos, selectedFolder, vaultFolders) {
+        if (selectedFolder == "All") {
+            hiddenVideos
+        } else {
+            hiddenVideos.filter { vaultRepository.getVideoVaultFolder(it.id) == selectedFolder }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         // Vault Toolbar Actions
         Row(
@@ -677,9 +742,71 @@ private fun VaultContentView(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        if (hiddenVideos.isEmpty()) {
+        // Vault Folders row + "Add Folder" button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            LazyRow(
+                modifier = Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                item {
+                    FilterChip(
+                        selected = selectedFolder == "All",
+                        onClick = { onSelectFolder("All") },
+                        label = { Text("All (${hiddenVideos.size})", fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AmAccentBlue,
+                            selectedLabelColor = Color.White,
+                            containerColor = SaCardBg,
+                            labelColor = Color(0xFF9E9EA7)
+                        )
+                    )
+                }
+                items(vaultFolders.toList()) { folder ->
+                    val count = hiddenVideos.count { vaultRepository.getVideoVaultFolder(it.id) == folder }
+                    FilterChip(
+                        selected = selectedFolder == folder,
+                        onClick = { onSelectFolder(folder) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(14.dp))
+                        },
+                        label = { Text("$folder ($count)", fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AmAccentBlue,
+                            selectedLabelColor = Color.White,
+                            containerColor = SaCardBg,
+                            labelColor = Color(0xFF9E9EA7)
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(6.dp))
+
+            IconButton(
+                onClick = onCreateFolderClick,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(SaCardBg)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CreateNewFolder,
+                    contentDescription = "New Vault Folder",
+                    tint = AmAccentBlue,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (displayedVideos.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -695,7 +822,7 @@ private fun VaultContentView(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Vault is Empty",
+                        text = if (hiddenVideos.isEmpty()) "Vault is Empty" else "No videos in '$selectedFolder'",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -714,7 +841,8 @@ private fun VaultContentView(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                items(hiddenVideos, key = { it.id }) { item ->
+                items(displayedVideos, key = { it.id }) { item ->
+                    val currentFolder = vaultRepository.getVideoVaultFolder(item.id)
                     Surface(
                         shape = RoundedCornerShape(16.dp),
                         color = SaCardBg,
@@ -770,13 +898,23 @@ private fun VaultContentView(
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "${item.folderName} • ${(item.sizeBytes / (1024 * 1024))} MB",
+                                    text = "Folder: $currentFolder • ${(item.sizeBytes / (1024 * 1024))} MB",
                                     fontSize = 11.sp,
                                     color = Color(0xFF9E9EA7)
                                 )
                             }
 
                             Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Move to another vault folder
+                                IconButton(onClick = { onMoveVideoClick(item) }) {
+                                    Icon(
+                                        imageVector = Icons.Default.DriveFileMove,
+                                        contentDescription = "Move Folder",
+                                        tint = AmAccentBlue,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+
                                 // Play in AM Player
                                 IconButton(onClick = { onPlayVideo(item.id) }) {
                                     Icon(

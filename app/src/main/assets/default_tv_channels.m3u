@@ -1,0 +1,73 @@
+#EXTM3U x-tvg-url="https://iptv-org.github.io/epg/guides.xml"
+
+# ==========================================
+# CATEGORY: NEWS & CURRENT AFFAIRS
+# ==========================================
+#EXTINF:-1 tvg-id="BBCNews.uk" tvg-name="BBC News" tvg-logo="https://i.imgur.com/8Q9Z9XX.png" group-title="News",BBC News (UK)
+http://stream.tvgarden.world/live/bbcnews.m3u8
+#EXTINF:-1 tvg-id="CNN.us" tvg-name="CNN International" tvg-logo="https://i.imgur.com/Y3W1G1m.png" group-title="News",CNN International (US)
+http://stream.tvgarden.world/live/cnn.m3u8
+#EXTINF:-1 tvg-id="AlJazeera.qa" tvg-name="Al Jazeera English" tvg-logo="https://i.imgur.com/s6ZgX9a.png" group-title="News",Al Jazeera English (Qatar)
+http://stream.tvgarden.world/live/aljazeera_en.m3u8
+#EXTINF:-1 tvg-id="DWEnglish.de" tvg-name="DW English" tvg-logo="https://i.imgur.com/uT2V1aD.png" group-title="News",DW English (Germany)
+http://stream.tvgarden.world/live/dw_en.m3u8
+#EXTINF:-1 tvg-id="France24EN.fr" tvg-name="France 24 English" tvg-logo="https://i.imgur.com/3N40z7v.png" group-title="News",France 24 English (France)
+http://stream.tvgarden.world/live/france24_en.m3u8
+#EXTINF:-1 tvg-id="EuronewsEN.fr" tvg-name="Euronews English" tvg-logo="https://i.imgur.com/W2d0f5G.png" group-title="News",Euronews English (Europe)
+http://stream.tvgarden.world/live/euronews_en.m3u8
+#EXTINF:-1 tvg-id="NHKWorld.jp" tvg-name="NHK World Japan" tvg-logo="https://i.imgur.com/O1l0B8q.png" group-title="News",NHK World Japan (Japan)
+http://stream.tvgarden.world/live/nhk_world.m3u8
+#EXTINF:-1 tvg-id="NDTV24x7.in" tvg-name="NDTV 24x7" tvg-logo="https://i.imgur.com/7pW4z7v.png" group-title="News",NDTV 24x7 (India)
+http://stream.tvgarden.world/live/ndtv24x7.m3u8
+
+# ==========================================
+# CATEGORY: SPORTS
+# ==========================================
+#EXTINF:-1 tvg-id="RedBullTV.at" tvg-name="Red Bull TV" tvg-logo="https://i.imgur.com/X4v5M5L.png" group-title="Sports",Red Bull TV (Global)
+http://stream.tvgarden.world/live/redbulltv.m3u8
+#EXTINF:-1 tvg-id="WorldMotorsport.com" tvg-name="Motorsport TV" tvg-logo="https://i.imgur.com/K9p1N2v.png" group-title="Sports",Motorsport TV (Global)
+http://stream.tvgarden.world/live/motorsporttv.m3u8
+#EXTINF:-1 tvg-id="UnbeatenSports.us" tvg-name="Unbeaten Sports" tvg-logo="https://i.imgur.com/M2o7P1x.png" group-title="Sports",Unbeaten Sports (US)
+http://stream.tvgarden.world/live/unbeaten.m3u8
+#EXTINF:-1 tvg-id="WorldPokerTour.us" tvg-name="World Poker Tour" tvg-logo="https://i.imgur.com/8Q9Z9XX.png" group-title="Sports",World Poker Tour Channel
+http://stream.tvgarden.world/live/wpt.m3u8
+
+# ==========================================
+# CATEGORY: DOCUMENTARIES & NATURE
+# ==========================================
+#EXTINF:-1 tvg-id="CGTNDocumentary.cn" tvg-name="CGTN Documentary" tvg-logo="https://i.imgur.com/7gK9M3p.png" group-title="Documentary",CGTN Documentary
+http://stream.tvgarden.world/live/cgtn_doc.m3u8
+#EXTINF:-1 tvg-id="NASATV.us" tvg-name="NASA TV Public" tvg-logo="https://i.imgur.com/A0L9U3e.png" group-title="Documentary",NASA TV Public Channel (US)
+http://stream.tvgarden.world/live/nasa_tv.m3u8
+#EXTINF:-1 tvg-id="NASAMedia.us" tvg-name="NASA TV Media" tvg-logo="https://i.imgur.com/A0L9U3e.png" group-title="Documentary",NASA TV Media Channel (US)
+http://stream.tvgarden.world/live/nasa_media.m3u8
+#EXTINF:-1 tvg-id="WildEarth.za" tvg-name="WildEarth Safari" tvg-logo="https://i.imgur.com/2pL8K1m.png" group-title="Documentary",WildEarth TV Live Safari (South Africa)
+http://stream.tvgarden.world/live/wildearth.m3u8
+
+# ==========================================
+# CATEGORY: ENTERTAINMENT & MOVIES
+# ==========================================
+#EXTINF:-1 tvg-id="FilmRiseAction.us" tvg-name="FilmRise Action" tvg-logo="https://i.imgur.com/5V4N3bC.png" group-title="Movies",FilmRise Action Movies
+http://stream.tvgarden.world/live/filmrise_action.m3u8
+#EXTINF:-1 tvg-id="FilmRiseSciFi.us" tvg-name="FilmRise Sci-Fi" tvg-logo="https://i.imgur.com/5V4N3bC.png" group-title="Movies",FilmRise Sci-Fi & Fantasy
+http://stream.tvgarden.world/live/filmrise_scifi.m3u8
+#EXTINF:-1 tvg-id="ClassicMovies.us" tvg-name="Classic Cinema Network" tvg-logo="https://i.imgur.com/1O2P3qR.png" group-title="Movies",Classic Cinema Network
+http://stream.tvgarden.world/live/classic_cinema.m3u8
+
+# ==========================================
+# CATEGORY: MUSIC TV
+# ==========================================
+#EXTINF:-1 tvg-id="ClubbingTV.fr" tvg-name="Clubbing TV" tvg-logo="https://i.imgur.com/L1M2N3O.png" group-title="Music TV",Clubbing TV Dance & EDM
+http://stream.tvgarden.world/live/clubbingtv.m3u8
+#EXTINF:-1 tvg-id="DeluxeMusic.de" tvg-name="Deluxe Music" tvg-logo="https://i.imgur.com/9P0Q1RS.png" group-title="Music TV",Deluxe Music (Germany)
+http://stream.tvgarden.world/live/deluxemusic.m3u8
+#EXTINF:-1 tvg-id="KpopTV.kr" tvg-name="K-POP Live TV" tvg-logo="https://i.imgur.com/3T4U5V6.png" group-title="Music TV",K-POP Live Channel (Korea)
+http://stream.tvgarden.world/live/kpop_tv.m3u8
+
+# ==========================================
+# CATEGORY: KIDS & FAMILY
+# ==========================================
+#EXTINF:-1 tvg-id="PBSKids.us" tvg-name="PBS Kids" tvg-logo="https://i.imgur.com/4W5X6Y7.png" group-title="Kids",PBS Kids (US)
+http://stream.tvgarden.world/live/pbskids.m3u8
+#EXTINF:-1 tvg-id="DuckTV.sk" tvg-name="Duck TV" tvg-logo="https://i.imgur.com/8Z9A0B1.png" group-title="Kids",Duck TV Toddler Channel
+http://stream.tvgarden.world/live/ducktv.m3u8

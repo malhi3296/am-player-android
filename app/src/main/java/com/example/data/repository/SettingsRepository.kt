@@ -5,9 +5,15 @@ import android.content.SharedPreferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.json.JSONObject
+import java.io.File
 
 data class AppSettingsState(
     val isDarkMode: Boolean = true,
+    val accentColorHex: String = "#4D6BFE",
+    val logoDarkModeOpacity: Float = 1.0f,
+    val gestureControlsEnabled: Boolean = true,
+    val onlineMusicEnabled: Boolean = false,
     val hwDecodingEnabled: Boolean = true,
     val swFallbackEnabled: Boolean = true,
     val colorMode: String = "Vivid",
@@ -17,12 +23,18 @@ data class AppSettingsState(
     val autoScanStartup: Boolean = true,
     val equalizerPreset: String = "Bass Boost",
     val seekDurationSeconds: Int = 10,
+    val playerSeekbarStyle: String = "Classic Dot",
+    val mpvProfile: String = "High Quality (HW+ / Vulkan)",
     val subtitleEncoding: String = "UTF-8",
     val subtitleSize: String = "Medium",
-    val subtitleProvidersEnabled: Boolean = true
+    val subtitleFontSize: Int = 18,
+    val subtitleTextColorHex: String = "#FFFFFF",
+    val subtitleBackgroundColorHex: String = "#80000000",
+    val subtitleProvidersEnabled: Boolean = true,
+    val fileBrowserShowHidden: Boolean = false
 )
 
-class SettingsRepository(context: Context) {
+class SettingsRepository(private val context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -32,6 +44,10 @@ class SettingsRepository(context: Context) {
     private fun loadSettings(): AppSettingsState {
         return AppSettingsState(
             isDarkMode = prefs.getBoolean(KEY_DARK_MODE, true),
+            accentColorHex = prefs.getString(KEY_ACCENT_COLOR, "#4D6BFE") ?: "#4D6BFE",
+            logoDarkModeOpacity = prefs.getFloat(KEY_LOGO_OPACITY, 1.0f),
+            gestureControlsEnabled = prefs.getBoolean(KEY_GESTURE_CONTROLS, true),
+            onlineMusicEnabled = prefs.getBoolean(KEY_ONLINE_MUSIC, false),
             hwDecodingEnabled = prefs.getBoolean(KEY_HW_DECODING, true),
             swFallbackEnabled = prefs.getBoolean(KEY_SW_FALLBACK, true),
             colorMode = prefs.getString(KEY_COLOR_MODE, "Vivid") ?: "Vivid",
@@ -39,17 +55,43 @@ class SettingsRepository(context: Context) {
             playWhenLocked = prefs.getBoolean(KEY_PLAY_LOCKED, true),
             autoResumeEnabled = prefs.getBoolean(KEY_AUTO_RESUME, true),
             autoScanStartup = prefs.getBoolean(KEY_AUTO_SCAN, true),
-            equalizerPreset = prefs.getString(KEY_EQ_PRESET, "Bass Boost") ?: "Bass Boost",
+            equalizerPreset = prefs.getString(KEY_EQ_PRESET, "Balanced") ?: "Balanced",
             seekDurationSeconds = prefs.getInt(KEY_SEEK_DURATION, 10),
+            playerSeekbarStyle = prefs.getString(KEY_SEEKBAR_STYLE, "Classic Dot") ?: "Classic Dot",
+            mpvProfile = prefs.getString(KEY_MPV_PROFILE, "High Quality (HW+ / Vulkan)") ?: "High Quality (HW+ / Vulkan)",
             subtitleEncoding = prefs.getString(KEY_SUB_ENCODING, "UTF-8") ?: "UTF-8",
             subtitleSize = prefs.getString(KEY_SUB_SIZE, "Medium") ?: "Medium",
-            subtitleProvidersEnabled = prefs.getBoolean(KEY_SUB_PROVIDERS, true)
+            subtitleFontSize = prefs.getInt(KEY_SUB_FONT_SIZE, 18),
+            subtitleTextColorHex = prefs.getString(KEY_SUB_TEXT_COLOR, "#FFFFFF") ?: "#FFFFFF",
+            subtitleBackgroundColorHex = prefs.getString(KEY_SUB_BG_COLOR, "#80000000") ?: "#80000000",
+            subtitleProvidersEnabled = prefs.getBoolean(KEY_SUB_PROVIDERS, true),
+            fileBrowserShowHidden = prefs.getBoolean(KEY_BROWSER_SHOW_HIDDEN, false)
         )
     }
 
     fun setDarkMode(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply()
         _settings.value = _settings.value.copy(isDarkMode = enabled)
+    }
+
+    fun setAccentColor(colorHex: String) {
+        prefs.edit().putString(KEY_ACCENT_COLOR, colorHex).apply()
+        _settings.value = _settings.value.copy(accentColorHex = colorHex)
+    }
+
+    fun setLogoDarkModeOpacity(opacity: Float) {
+        prefs.edit().putFloat(KEY_LOGO_OPACITY, opacity).apply()
+        _settings.value = _settings.value.copy(logoDarkModeOpacity = opacity)
+    }
+
+    fun setGestureControls(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_GESTURE_CONTROLS, enabled).apply()
+        _settings.value = _settings.value.copy(gestureControlsEnabled = enabled)
+    }
+
+    fun setOnlineMusic(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ONLINE_MUSIC, enabled).apply()
+        _settings.value = _settings.value.copy(onlineMusicEnabled = enabled)
     }
 
     fun setHwDecoding(enabled: Boolean) {
@@ -97,6 +139,16 @@ class SettingsRepository(context: Context) {
         _settings.value = _settings.value.copy(seekDurationSeconds = seconds)
     }
 
+    fun setPlayerSeekbarStyle(style: String) {
+        prefs.edit().putString(KEY_SEEKBAR_STYLE, style).apply()
+        _settings.value = _settings.value.copy(playerSeekbarStyle = style)
+    }
+
+    fun setMpvProfile(profile: String) {
+        prefs.edit().putString(KEY_MPV_PROFILE, profile).apply()
+        _settings.value = _settings.value.copy(mpvProfile = profile)
+    }
+
     fun setSubtitleEncoding(encoding: String) {
         prefs.edit().putString(KEY_SUB_ENCODING, encoding).apply()
         _settings.value = _settings.value.copy(subtitleEncoding = encoding)
@@ -107,14 +159,106 @@ class SettingsRepository(context: Context) {
         _settings.value = _settings.value.copy(subtitleSize = size)
     }
 
+    fun setSubtitleFontSize(sizeSp: Int) {
+        prefs.edit().putInt(KEY_SUB_FONT_SIZE, sizeSp).apply()
+        _settings.value = _settings.value.copy(subtitleFontSize = sizeSp)
+    }
+
+    fun setSubtitleTextColor(colorHex: String) {
+        prefs.edit().putString(KEY_SUB_TEXT_COLOR, colorHex).apply()
+        _settings.value = _settings.value.copy(subtitleTextColorHex = colorHex)
+    }
+
+    fun setSubtitleBackgroundColor(colorHex: String) {
+        prefs.edit().putString(KEY_SUB_BG_COLOR, colorHex).apply()
+        _settings.value = _settings.value.copy(subtitleBackgroundColorHex = colorHex)
+    }
+
     fun setSubtitleProviders(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_SUB_PROVIDERS, enabled).apply()
         _settings.value = _settings.value.copy(subtitleProvidersEnabled = enabled)
     }
 
+    fun setFileBrowserShowHidden(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BROWSER_SHOW_HIDDEN, enabled).apply()
+        _settings.value = _settings.value.copy(fileBrowserShowHidden = enabled)
+    }
+
+    fun clearAppCache(): Long {
+        var bytesCleared = 0L
+        try {
+            val cacheDir = context.cacheDir
+            bytesCleared += deleteDirRecursive(cacheDir)
+            val externalCache = context.externalCacheDir
+            if (externalCache != null) {
+                bytesCleared += deleteDirRecursive(externalCache)
+            }
+        } catch (_: Exception) {}
+        return bytesCleared
+    }
+
+    private fun deleteDirRecursive(dir: File?): Long {
+        if (dir == null || !dir.exists()) return 0L
+        var total = 0L
+        dir.listFiles()?.forEach { file ->
+            total += if (file.isDirectory) {
+                deleteDirRecursive(file)
+            } else {
+                val len = file.length()
+                if (file.delete()) len else 0L
+            }
+        }
+        return total
+    }
+
+    fun exportSettingsJson(): String {
+        val json = JSONObject()
+        val s = _settings.value
+        json.put("isDarkMode", s.isDarkMode)
+        json.put("accentColorHex", s.accentColorHex)
+        json.put("logoDarkModeOpacity", s.logoDarkModeOpacity.toDouble())
+        json.put("gestureControlsEnabled", s.gestureControlsEnabled)
+        json.put("onlineMusicEnabled", s.onlineMusicEnabled)
+        json.put("hwDecodingEnabled", s.hwDecodingEnabled)
+        json.put("swFallbackEnabled", s.swFallbackEnabled)
+        json.put("colorMode", s.colorMode)
+        json.put("seekDurationSeconds", s.seekDurationSeconds)
+        json.put("playerSeekbarStyle", s.playerSeekbarStyle)
+        json.put("mpvProfile", s.mpvProfile)
+        json.put("subtitleFontSize", s.subtitleFontSize)
+        json.put("subtitleTextColorHex", s.subtitleTextColorHex)
+        json.put("subtitleBackgroundColorHex", s.subtitleBackgroundColorHex)
+        json.put("fileBrowserShowHidden", s.fileBrowserShowHidden)
+        return json.toString(2)
+    }
+
+    fun importSettingsJson(jsonStr: String): Boolean {
+        return try {
+            val json = JSONObject(jsonStr)
+            if (json.has("accentColorHex")) setAccentColor(json.getString("accentColorHex"))
+            if (json.has("isDarkMode")) setDarkMode(json.getBoolean("isDarkMode"))
+            if (json.has("gestureControlsEnabled")) setGestureControls(json.getBoolean("gestureControlsEnabled"))
+            if (json.has("onlineMusicEnabled")) setOnlineMusic(json.getBoolean("onlineMusicEnabled"))
+            if (json.has("hwDecodingEnabled")) setHwDecoding(json.getBoolean("hwDecodingEnabled"))
+            if (json.has("seekDurationSeconds")) setSeekDuration(json.getInt("seekDurationSeconds"))
+            if (json.has("playerSeekbarStyle")) setPlayerSeekbarStyle(json.getString("playerSeekbarStyle"))
+            if (json.has("mpvProfile")) setMpvProfile(json.getString("mpvProfile"))
+            if (json.has("subtitleFontSize")) setSubtitleFontSize(json.getInt("subtitleFontSize"))
+            if (json.has("subtitleTextColorHex")) setSubtitleTextColor(json.getString("subtitleTextColorHex"))
+            if (json.has("fileBrowserShowHidden")) setFileBrowserShowHidden(json.getBoolean("fileBrowserShowHidden"))
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     companion object {
         private const val PREFS_NAME = "am_player_app_settings"
         private const val KEY_DARK_MODE = "pref_dark_mode"
+        private const val KEY_ACCENT_COLOR = "pref_accent_color"
+        private const val KEY_LOGO_OPACITY = "pref_logo_opacity"
+        private const val KEY_GESTURE_CONTROLS = "pref_gesture_controls"
+        private const val KEY_ONLINE_MUSIC = "pref_online_music"
         private const val KEY_HW_DECODING = "pref_hw_decoding"
         private const val KEY_SW_FALLBACK = "pref_sw_fallback"
         private const val KEY_COLOR_MODE = "pref_color_mode"
@@ -124,8 +268,14 @@ class SettingsRepository(context: Context) {
         private const val KEY_AUTO_SCAN = "pref_auto_scan"
         private const val KEY_EQ_PRESET = "pref_eq_preset"
         private const val KEY_SEEK_DURATION = "pref_seek_duration"
+        private const val KEY_SEEKBAR_STYLE = "pref_seekbar_style"
+        private const val KEY_MPV_PROFILE = "pref_mpv_profile"
         private const val KEY_SUB_ENCODING = "pref_sub_encoding"
         private const val KEY_SUB_SIZE = "pref_sub_size"
+        private const val KEY_SUB_FONT_SIZE = "pref_sub_font_size"
+        private const val KEY_SUB_TEXT_COLOR = "pref_sub_text_color"
+        private const val KEY_SUB_BG_COLOR = "pref_sub_bg_color"
         private const val KEY_SUB_PROVIDERS = "pref_sub_providers"
+        private const val KEY_BROWSER_SHOW_HIDDEN = "pref_browser_show_hidden"
     }
 }

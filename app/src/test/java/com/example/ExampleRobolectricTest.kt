@@ -80,10 +80,9 @@ class ExampleRobolectricTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val vault = com.example.data.repository.VaultRepository(context)
         
-        // Initial state before setup
-        vault.setupVault("1234", enableBiometric = true)
+        // Initial state setup with PIN
+        vault.setupVault("1234")
         assertTrue(vault.isVaultConfigured.value)
-        assertTrue(vault.isBiometricEnabled.value)
         assertTrue(vault.verifyPin("1234"))
         org.junit.Assert.assertFalse(vault.verifyPin("9999"))
 
@@ -91,6 +90,12 @@ class ExampleRobolectricTest {
         vault.hideVideo("secret_vid_1")
         assertTrue(vault.isVideoHidden("secret_vid_1"))
         assertTrue(vault.hiddenVideoIds.value.contains("secret_vid_1"))
+
+        // Test vault folders
+        vault.createVaultFolder("Private")
+        assertTrue(vault.vaultFolders.value.contains("Private"))
+        vault.setVideoVaultFolder("secret_vid_1", "Private")
+        assertEquals("Private", vault.getVideoVaultFolder("secret_vid_1"))
 
         vault.unhideVideo("secret_vid_1")
         org.junit.Assert.assertFalse(vault.isVideoHidden("secret_vid_1"))

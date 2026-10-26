@@ -2,6 +2,7 @@ package com.example.ui.player
 
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.Build
 import android.view.ViewGroup
@@ -144,9 +145,12 @@ fun PlayerScreen(
         }
     }
 
-    // Clean up window brightness on exit and stop IPTV from playing in the background
+    // Force default landscape orientation on enter, restore on exit, clean up brightness and stop background media
     DisposableEffect(Unit) {
+        val prevOrientation = activity?.requestedOrientation ?: ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         onDispose {
+            activity?.requestedOrientation = prevOrientation
             activity?.window?.let { window ->
                 val lp = window.attributes
                 lp.screenBrightness = -1f // Reset to system default
@@ -234,9 +238,10 @@ fun PlayerScreen(
         // Gesture Overlay
         GestureOverlay(
             isLocked = uiState.isLocked,
+            gestureControlsEnabled = uiState.gestureControlsEnabled,
             onSingleTap = { viewModel.toggleControls() },
-            onDoubleTapLeft = { viewModel.seekBy(-10000L) },
-            onDoubleTapRight = { viewModel.seekBy(10000L) },
+            onDoubleTapLeft = { viewModel.seekBy(-uiState.seekDurationSeconds * 1000L) },
+            onDoubleTapRight = { viewModel.seekBy(uiState.seekDurationSeconds * 1000L) },
             onDoubleTapCenter = { viewModel.togglePlayPause() },
             onVerticalSwipe = { isRight, delta -> viewModel.onVerticalSwipe(isRight, delta) },
             onHorizontalSeekDrag = { delta -> viewModel.onHorizontalSeekDrag(delta) },
@@ -275,7 +280,8 @@ fun PlayerScreen(
                 }
             },
             onTimeDisplayClick = { viewModel.toggleRemainingTime() },
-            onMoreToolsClick = { showMoreOptionsDialog = true }
+            onMoreToolsClick = { showMoreOptionsDialog = true },
+            onDecoderToggle = { viewModel.toggleDecoderMode() }
         )
 
         // Persistent bottom mini seek progress bar when controls are auto-hidden

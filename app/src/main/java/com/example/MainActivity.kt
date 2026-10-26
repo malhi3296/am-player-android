@@ -10,6 +10,7 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,7 +43,10 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            var isDarkMode by remember { mutableStateOf(true) }
+            val settings by container.settingsRepository.settings.collectAsState()
+            val accentColor = remember(settings.accentColorHex) {
+                com.example.ui.theme.parseHexColor(settings.accentColorHex)
+            }
             var currentPlayingUri by remember { mutableStateOf(intentUri) }
 
             LaunchedEffect(intentUri) {
@@ -51,7 +55,10 @@ class MainActivity : ComponentActivity() {
                 }
             }
 
-            AMPlayerTheme(darkTheme = isDarkMode) {
+            AMPlayerTheme(
+                darkTheme = settings.isDarkMode,
+                accentColor = accentColor
+            ) {
                 Crossfade(
                     targetState = currentPlayingUri,
                     label = "screen_transition",
@@ -69,8 +76,8 @@ class MainActivity : ComponentActivity() {
                         MainHomeScreen(
                             libraryViewModel = libraryViewModel,
                             container = container,
-                            isDarkMode = isDarkMode,
-                            onToggleDarkMode = { isDarkMode = it },
+                            isDarkMode = settings.isDarkMode,
+                            onToggleDarkMode = { container.settingsRepository.setDarkMode(it) },
                             onPlayMedia = { selectedUri ->
                                 currentPlayingUri = selectedUri
                             }

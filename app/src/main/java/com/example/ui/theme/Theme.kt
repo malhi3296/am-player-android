@@ -6,6 +6,20 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
+fun parseHexColor(hex: String, fallback: Color = AmAccentBlue): Color {
+    return try {
+        val clean = hex.removePrefix("#")
+        val longVal = clean.toLong(16)
+        if (clean.length == 6) {
+            Color(longVal or 0xFF000000)
+        } else {
+            Color(longVal)
+        }
+    } catch (e: Exception) {
+        fallback
+    }
+}
+
 private val AmPlayerDarkColorScheme = darkColorScheme(
     primary = AmAccentBlue,
     onPrimary = Color.White,
@@ -47,9 +61,13 @@ private val AmPlayerLightColorScheme = lightColorScheme(
 @Composable
 fun AMPlayerTheme(
     darkTheme: Boolean = true,
+    accentColor: Color = AmAccentBlue,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) AmPlayerDarkColorScheme else AmPlayerLightColorScheme
+    val baseScheme = if (darkTheme) AmPlayerDarkColorScheme else AmPlayerLightColorScheme
+    val colorScheme = baseScheme.copy(
+        primary = accentColor
+    )
 
     MaterialTheme(
         colorScheme = colorScheme,

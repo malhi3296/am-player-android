@@ -3,7 +3,6 @@ package com.example.ui.iptv
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -30,22 +28,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Movie
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Public
-import androidx.compose.material.icons.filled.RocketLaunch
+import androidx.compose.material.icons.filled.Radio
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.SportsSoccer
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -63,7 +53,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -73,59 +62,10 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.IptvChannel
 import com.example.data.model.IptvPlaylistFolder
 import com.example.data.repository.IptvRepository
+import com.example.data.repository.SuggestedPlaylist
 import com.example.ui.theme.AmAccentBlue
 import com.example.ui.theme.SaCardBg
 import com.example.ui.theme.SaCardBgElevated
-import com.example.ui.theme.SaFolderBadgeRed
-
-fun parseHexColor(hex: String, fallback: Color = AmAccentBlue): Color {
-    return try {
-        val clean = hex.replace("#", "")
-        val longVal = clean.toLong(16)
-        if (clean.length == 6) {
-            Color(longVal or 0x00000000FF000000)
-        } else {
-            Color(longVal)
-        }
-    } catch (_: Exception) {
-        fallback
-    }
-}
-
-fun getIconForName(iconName: String): ImageVector {
-    return when (iconName.lowercase()) {
-        "sports" -> Icons.Default.SportsSoccer
-        "news" -> Icons.Default.Newspaper
-        "movie" -> Icons.Default.Movie
-        "music" -> Icons.Default.MusicNote
-        "science" -> Icons.Default.RocketLaunch
-        "globe" -> Icons.Default.Public
-        "star" -> Icons.Default.Star
-        else -> Icons.Default.LiveTv
-    }
-}
-
-val availableFolderColors = listOf(
-    "#4D6BFE", // AM Blue
-    "#00E5FF", // Neon Cyan
-    "#EF4444", // Coral Red
-    "#10B981", // Emerald
-    "#8B5CF6", // Purple
-    "#F59E0B", // Amber
-    "#EC4899", // Rose Pink
-    "#64748B"  // Slate
-)
-
-val availableFolderIcons = listOf(
-    "tv" to "TV Live",
-    "news" to "News",
-    "sports" to "Sports",
-    "movie" to "Cinema",
-    "music" to "Music",
-    "science" to "Science",
-    "globe" to "World",
-    "star" to "Featured"
-)
 
 @Composable
 fun IptvScreen(
@@ -135,12 +75,9 @@ fun IptvScreen(
     modifier: Modifier = Modifier
 ) {
     var selectedFolderId by remember { mutableStateOf<String?>(null) }
-    var showEditFolderDialog by remember { mutableStateOf<IptvPlaylistFolder?>(null) }
     var showAddPlaylistDialog by remember { mutableStateOf(false) }
     var showAddChannelDialog by remember { mutableStateOf(false) }
-
     var searchQuery by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("All") }
 
     val selectedFolder = folders.firstOrNull { it.id == selectedFolderId }
 
@@ -158,25 +95,18 @@ fun IptvScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         if (selectedFolder == null) {
-            // PLAYLIST FOLDERS ROOT VIEW (just like home page for videos!)
+            // PLAYLIST FOLDERS ROOT VIEW - Clean heading without subheadings
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "IPTV Playlists",
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "${folders.size} M3U Playlist Folders • Live Streams",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "IPTV",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
 
                 Surface(
                     shape = RoundedCornerShape(12.dp),
@@ -208,7 +138,7 @@ fun IptvScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 3-Column Playlist Folders Grid (matching video folders UI!)
+            // 3-Column Playlist Folders Grid (uniform folder icon color, no colourful rainbow)
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 contentPadding = PaddingValues(bottom = 96.dp),
@@ -221,17 +151,16 @@ fun IptvScreen(
                 items(folders, key = { it.id }) { folder ->
                     IptvFolderGridItem(
                         folder = folder,
-                        onClick = { selectedFolderId = folder.id },
-                        onEdit = { showEditFolderDialog = folder }
+                        onClick = { selectedFolderId = folder.id }
                     )
                 }
             }
         } else {
             // INSIDE PLAYLIST FOLDER VIEW
-            val folderColor = parseHexColor(selectedFolder.colorHex)
-            val folderIcon = getIconForName(selectedFolder.iconName)
+            val isRadio = selectedFolder.iconName.contains("radio", ignoreCase = true) ||
+                    selectedFolder.name.contains("radio", ignoreCase = true)
 
-            // Header with back button & customize button
+            // Header with back button & clean title (no subheadings)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -249,53 +178,29 @@ fun IptvScreen(
                         )
                     }
                     Spacer(modifier = Modifier.width(4.dp))
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(folderColor.copy(alpha = 0.2f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = folderIcon,
-                            contentDescription = null,
-                            tint = folderColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Column {
-                        Text(
-                            text = selectedFolder.name,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${selectedFolder.channels.size} Live Channels",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isRadio) Icons.Default.Radio else Icons.Default.LiveTv,
+                        contentDescription = null,
+                        tint = AmAccentBlue,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = selectedFolder.name,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { showEditFolderDialog = selectedFolder }) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Playlist Folder",
-                            tint = folderColor
-                        )
-                    }
-                    IconButton(onClick = { showAddChannelDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Channel",
-                            tint = AmAccentBlue
-                        )
-                    }
+                IconButton(onClick = { showAddChannelDialog = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Channel",
+                        tint = AmAccentBlue
+                    )
                 }
             }
 
@@ -305,12 +210,12 @@ fun IptvScreen(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                placeholder = { Text("Search ${selectedFolder.name} channels...", fontSize = 13.sp) },
+                placeholder = { Text("Search ${selectedFolder.name}...", fontSize = 13.sp) },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = folderColor
+                        tint = AmAccentBlue
                     )
                 },
                 trailingIcon = {
@@ -323,7 +228,7 @@ fun IptvScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = folderColor,
+                    focusedBorderColor = AmAccentBlue,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 ),
                 modifier = Modifier
@@ -346,7 +251,7 @@ fun IptvScreen(
                 items(filteredChannels, key = { it.id }) { channel ->
                     IptvChannelCard(
                         channel = channel,
-                        accentColor = folderColor,
+                        isRadio = isRadio,
                         onPlay = { onPlayChannel(channel.streamUrl) }
                     )
                 }
@@ -354,145 +259,20 @@ fun IptvScreen(
         }
     }
 
-    // DIALOG: EDIT PLAYLIST FOLDER (Change Name, Color, Icon)
-    if (showEditFolderDialog != null) {
-        val target = showEditFolderDialog!!
-        var editedName by remember { mutableStateOf(target.name) }
-        var editedColorHex by remember { mutableStateOf(target.colorHex) }
-        var editedIconName by remember { mutableStateOf(target.iconName) }
-
-        AlertDialog(
-            onDismissRequest = { showEditFolderDialog = null },
-            containerColor = SaCardBgElevated,
-            shape = RoundedCornerShape(20.dp),
-            title = {
-                Text(
-                    text = "Customize Playlist Folder",
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    Text(
-                        text = "Folder Name",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFA1A1AA)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    OutlinedTextField(
-                        value = editedName,
-                        onValueChange = { editedName = it },
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = parseHexColor(editedColorHex),
-                            unfocusedBorderColor = Color(0xFF3F3F46)
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Text(
-                        text = "Folder Accent Color",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFA1A1AA)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(availableFolderColors) { hex ->
-                            val color = parseHexColor(hex)
-                            val isSelected = hex.equals(editedColorHex, ignoreCase = true)
-                            Box(
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .border(
-                                        width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) Color.White else Color.Transparent,
-                                        shape = CircleShape
-                                    )
-                                    .clickable { editedColorHex = hex }
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Text(
-                        text = "Folder Icon",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFA1A1AA)
-                    )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(availableFolderIcons) { (iconKey, label) ->
-                            val iconVec = getIconForName(iconKey)
-                            val isSelected = iconKey == editedIconName
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isSelected) parseHexColor(editedColorHex).copy(alpha = 0.25f) else Color(0xFF27272A),
-                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, parseHexColor(editedColorHex)) else null,
-                                modifier = Modifier.clickable { editedIconName = iconKey }
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = iconVec,
-                                        contentDescription = label,
-                                        tint = if (isSelected) parseHexColor(editedColorHex) else Color.White,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = label,
-                                        fontSize = 11.sp,
-                                        color = if (isSelected) parseHexColor(editedColorHex) else Color.White
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        repository.updateFolder(
-                            target.id,
-                            editedName,
-                            editedColorHex,
-                            editedIconName
-                        )
-                        showEditFolderDialog = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = parseHexColor(editedColorHex)),
-                    shape = RoundedCornerShape(10.dp)
-                ) {
-                    Text("Save Changes", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditFolderDialog = null }) {
-                    Text("Cancel", color = Color(0xFFA1A1AA))
-                }
-            }
-        )
-    }
-
-    // DIALOG: CREATE NEW M3U PLAYLIST FOLDER
+    // DIALOG: CREATE NEW M3U PLAYLIST FOLDER WITH INTERNET SEARCH & SUGGESTIONS
     if (showAddPlaylistDialog) {
         var newFolderName by remember { mutableStateOf("") }
         var newStreamOrM3uUrl by remember { mutableStateOf("") }
-        var chosenColorHex by remember { mutableStateOf("#4D6BFE") }
-        var chosenIconName by remember { mutableStateOf("tv") }
+        var internetSearchQuery by remember { mutableStateOf("") }
+        val suggestedPlaylists = remember { repository.getSuggestedOnlinePlaylists() }
+        val filteredSuggestions = remember(internetSearchQuery) {
+            if (internetSearchQuery.isBlank()) suggestedPlaylists else {
+                suggestedPlaylists.filter {
+                    it.title.contains(internetSearchQuery, ignoreCase = true) ||
+                            it.description.contains(internetSearchQuery, ignoreCase = true)
+                }
+            }
+        }
 
         AlertDialog(
             onDismissRequest = { showAddPlaylistDialog = false },
@@ -500,7 +280,7 @@ fun IptvScreen(
             shape = RoundedCornerShape(20.dp),
             title = {
                 Text(
-                    text = "New M3U Playlist Folder",
+                    text = "Add M3U Playlist",
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -508,7 +288,7 @@ fun IptvScreen(
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Enter a name, choose an icon & color, and enter direct HLS (.m3u8) or M3U stream URL:",
+                        text = "Enter a playlist name and direct M3U URL, or choose from online playlists below:",
                         fontSize = 12.sp,
                         color = Color(0xFFA1A1AA)
                     )
@@ -516,10 +296,10 @@ fun IptvScreen(
                     OutlinedTextField(
                         value = newFolderName,
                         onValueChange = { newFolderName = it },
-                        placeholder = { Text("Playlist Name (e.g. European Sports)", fontSize = 13.sp) },
+                        placeholder = { Text("Playlist Name", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = parseHexColor(chosenColorHex),
+                            focusedBorderColor = AmAccentBlue,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -529,79 +309,77 @@ fun IptvScreen(
                     OutlinedTextField(
                         value = newStreamOrM3uUrl,
                         onValueChange = { newStreamOrM3uUrl = it },
-                        placeholder = { Text("https://example.com/live.m3u8", fontSize = 13.sp) },
+                        placeholder = { Text("https://example.com/playlist.m3u", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = parseHexColor(chosenColorHex),
+                            focusedBorderColor = AmAccentBlue,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "Pick Folder Color",
+                        text = "Browse Online Playlists (Tap to auto-fill):",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFA1A1AA)
+                        color = AmAccentBlue
                     )
                     Spacer(modifier = Modifier.height(6.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(availableFolderColors) { hex ->
-                            val color = parseHexColor(hex)
-                            val isSelected = hex == chosenColorHex
-                            Box(
-                                modifier = Modifier
-                                    .size(32.dp)
-                                    .clip(CircleShape)
-                                    .background(color)
-                                    .border(
-                                        width = if (isSelected) 3.dp else 1.dp,
-                                        color = if (isSelected) Color.White else Color.Transparent,
-                                        shape = CircleShape
-                                    )
-                                    .clickable { chosenColorHex = hex }
-                            )
-                        }
-                    }
 
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Text(
-                        text = "Pick Folder Icon",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFFA1A1AA)
+                    OutlinedTextField(
+                        value = internetSearchQuery,
+                        onValueChange = { internetSearchQuery = it },
+                        placeholder = { Text("Search online playlists...", fontSize = 11.sp) },
+                        singleLine = true,
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AmAccentBlue,
+                            unfocusedBorderColor = Color(0xFF2E2E36)
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(availableFolderIcons) { (iconKey, label) ->
-                            val iconVec = getIconForName(iconKey)
-                            val isSelected = iconKey == chosenIconName
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        items(filteredSuggestions) { item ->
                             Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isSelected) parseHexColor(chosenColorHex).copy(alpha = 0.25f) else Color(0xFF27272A),
-                                border = if (isSelected) androidx.compose.foundation.BorderStroke(1.5.dp, parseHexColor(chosenColorHex)) else null,
-                                modifier = Modifier.clickable { chosenIconName = iconKey }
+                                shape = RoundedCornerShape(8.dp),
+                                color = SaCardBg,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF2E2E36)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        newFolderName = item.title
+                                        newStreamOrM3uUrl = item.url
+                                    }
                             ) {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = iconVec,
-                                        contentDescription = label,
-                                        tint = if (isSelected) parseHexColor(chosenColorHex) else Color.White,
-                                        modifier = Modifier.size(15.dp)
+                                        imageVector = if (item.isRadio) Icons.Default.Radio else Icons.Default.LiveTv,
+                                        contentDescription = null,
+                                        tint = AmAccentBlue,
+                                        modifier = Modifier.size(16.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = label,
-                                        fontSize = 10.sp,
-                                        color = if (isSelected) parseHexColor(chosenColorHex) else Color.White
-                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(item.title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text(item.description, fontSize = 10.sp, color = Color(0xFF9E9EA7), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
                                 }
                             }
                         }
@@ -611,19 +389,20 @@ fun IptvScreen(
             confirmButton = {
                 Button(
                     onClick = {
+                        val iconName = if (newFolderName.contains("radio", ignoreCase = true) || newStreamOrM3uUrl.contains("radio", ignoreCase = true)) "radio" else "tv"
                         val created = repository.createFolder(
-                            name = newFolderName,
-                            colorHex = chosenColorHex,
-                            iconName = chosenIconName,
+                            name = newFolderName.ifBlank { "Custom Playlist" },
+                            colorHex = "#4D6BFE",
+                            iconName = iconName,
                             initialStreamUrl = newStreamOrM3uUrl
                         )
                         selectedFolderId = created.id
                         showAddPlaylistDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = parseHexColor(chosenColorHex)),
+                    colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Create Folder", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Add Playlist", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -658,7 +437,7 @@ fun IptvScreen(
                         placeholder = { Text("Channel Name", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = parseHexColor(selectedFolder.colorHex),
+                            focusedBorderColor = AmAccentBlue,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -671,7 +450,7 @@ fun IptvScreen(
                         placeholder = { Text("https://example.com/live.m3u8", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = parseHexColor(selectedFolder.colorHex),
+                            focusedBorderColor = AmAccentBlue,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -691,7 +470,7 @@ fun IptvScreen(
                         }
                         showAddChannelDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = parseHexColor(selectedFolder.colorHex)),
+                    colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Add Stream", color = Color.White, fontWeight = FontWeight.Bold)
@@ -707,16 +486,16 @@ fun IptvScreen(
 }
 
 /**
- * 3-Column Playlist Folder Card matching the Video Folders UI from sa.jpg!
+ * 3-Column Playlist Folder Card matching Video Folders UI:
+ * Uniform Accent color, transparent/clean background, channel count below (no red badge).
  */
 @Composable
 private fun IptvFolderGridItem(
     folder: IptvPlaylistFolder,
-    onClick: () -> Unit,
-    onEdit: () -> Unit
+    onClick: () -> Unit
 ) {
-    val folderColor = parseHexColor(folder.colorHex)
-    val folderIcon = getIconForName(folder.iconName)
+    val isRadio = folder.iconName.contains("radio", ignoreCase = true) ||
+            folder.name.contains("radio", ignoreCase = true)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -724,62 +503,24 @@ private fun IptvFolderGridItem(
             .fillMaxWidth()
             .clickable { onClick() }
     ) {
-        // Rounded dark square box containing custom colored folder icon + edit button + badge
+        // Rounded dark square box containing uniform folder icon
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(SaCardBg),
             contentAlignment = Alignment.Center
         ) {
-            // Folder icon with custom color and icon type
             Icon(
-                imageVector = folderIcon,
+                imageVector = if (isRadio) Icons.Default.Radio else Icons.Default.Folder,
                 contentDescription = folder.name,
-                tint = folderColor,
-                modifier = Modifier.size(52.dp)
+                tint = AmAccentBlue,
+                modifier = Modifier.size(46.dp)
             )
-
-            // Red badge on top right with channel count
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = SaFolderBadgeRed,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 10.dp, end = 10.dp)
-            ) {
-                Text(
-                    text = "${folder.channels.size}",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                )
-            }
-
-            // Small edit icon button at top left to quickly customize name, color & icon
-            Surface(
-                shape = CircleShape,
-                color = Color(0x66000000),
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(top = 8.dp, start = 8.dp)
-                    .size(26.dp)
-                    .clickable { onEdit() }
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit Folder",
-                        tint = Color.White.copy(alpha = 0.85f),
-                        modifier = Modifier.size(13.dp)
-                    )
-                }
-            }
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         // Folder Title
         Text(
@@ -790,14 +531,14 @@ private fun IptvFolderGridItem(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
-            lineHeight = 16.sp
+            lineHeight = 15.sp
         )
 
         Spacer(modifier = Modifier.height(2.dp))
 
-        // Channel count
+        // Channel count below title (Item 22: mentioning under folder is enough)
         Text(
-            text = "${folder.channels.size} Channels",
+            text = "${folder.channels.size} items",
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
@@ -808,7 +549,7 @@ private fun IptvFolderGridItem(
 @Composable
 private fun IptvChannelCard(
     channel: IptvChannel,
-    accentColor: Color,
+    isRadio: Boolean,
     onPlay: () -> Unit
 ) {
     Surface(
@@ -826,15 +567,15 @@ private fun IptvChannelCard(
         ) {
             Box(
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(accentColor.copy(alpha = 0.15f)),
+                    .background(AmAccentBlue.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.LiveTv,
+                    imageVector = if (isRadio) Icons.Default.Radio else Icons.Default.LiveTv,
                     contentDescription = null,
-                    tint = accentColor,
+                    tint = AmAccentBlue,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -890,14 +631,14 @@ private fun IptvChannelCard(
 
             Surface(
                 shape = CircleShape,
-                color = accentColor.copy(alpha = 0.2f),
+                color = AmAccentBlue.copy(alpha = 0.2f),
                 modifier = Modifier.size(36.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Play Live Stream",
-                        tint = accentColor,
+                        tint = AmAccentBlue,
                         modifier = Modifier.size(22.dp)
                     )
                 }

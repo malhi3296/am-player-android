@@ -33,7 +33,8 @@ class MusicRepository(private val context: Context) {
                 MediaStore.Audio.Media.ARTIST,
                 MediaStore.Audio.Media.ALBUM,
                 MediaStore.Audio.Media.DURATION,
-                MediaStore.Audio.Media.SIZE
+                MediaStore.Audio.Media.SIZE,
+                MediaStore.Audio.Media.DATA
             )
 
             val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
@@ -47,6 +48,7 @@ class MusicRepository(private val context: Context) {
                 val albumCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
                 val durationCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
                 val sizeCol = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.SIZE)
+                val dataCol = cursor.getColumnIndex(MediaStore.Audio.Media.DATA)
 
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idCol)
@@ -56,6 +58,8 @@ class MusicRepository(private val context: Context) {
                     val album = cursor.getString(albumCol) ?: "Unknown Album"
                     val duration = cursor.getLong(durationCol)
                     val size = cursor.getLong(sizeCol)
+                    val path = if (dataCol != -1) cursor.getString(dataCol) else null
+                    val folder = path?.let { java.io.File(it).parentFile?.name } ?: "Music"
 
                     list.add(
                         AudioTrack(
@@ -64,6 +68,7 @@ class MusicRepository(private val context: Context) {
                             title = title,
                             artist = artist,
                             album = album,
+                            folderName = folder,
                             durationMs = duration,
                             sizeBytes = size
                         )
@@ -72,20 +77,12 @@ class MusicRepository(private val context: Context) {
             }
         } catch (_: Exception) {}
 
-        // Add built-in demo music
-        val demos = getDemoTracks()
-        for (demo in demos) {
-            if (list.none { it.id == demo.id }) {
-                list.add(demo)
-            }
-        }
-
-        // If open source streaming is permitted, add open-source royalty-free classical and creative commons tracks
+        // If online streaming is explicitly enabled by user in settings, allow streaming tracks
         if (_isOpenSourcePermitted.value) {
-            val openSourceTracks = getOpenSourceLibraryTracks()
-            for (os in openSourceTracks) {
-                if (list.none { it.id == os.id }) {
-                    list.add(os)
+            val customStreams = getCustomStreamTracks()
+            for (cs in customStreams) {
+                if (list.none { it.id == cs.id }) {
+                    list.add(cs)
                 }
             }
         }
@@ -94,46 +91,27 @@ class MusicRepository(private val context: Context) {
         list
     }
 
-    fun getDemoTracks(): List<AudioTrack> {
-        return listOf(
-            AudioTrack(
-                id = "music_demo_synthwave",
-                uri = "https://commondatastorage.googleapis.com/codeskulptor-demos/riceracer_soundtrack.mp3",
-                title = "Neon Highway (Synthwave Drive)",
-                artist = "AM Studio Synth",
-                album = "Cyber Dreams Vol. 1",
-                durationMs = 184000L,
-                sizeBytes = 4200000L
-            ),
-            AudioTrack(
-                id = "music_demo_ambient",
-                uri = "https://commondatastorage.googleapis.com/codeskulptor-assets/Epoq-Lepidoptera.ogg",
-                title = "Lepidoptera (Deep Chill Out)",
-                artist = "Epoq Ambient",
-                album = "Sonic Relax",
-                durationMs = 215000L,
-                sizeBytes = 3800000L
-            ),
-            AudioTrack(
-                id = "music_demo_space",
-                uri = "https://commondatastorage.googleapis.com/codeskulptor-demos/DDR_assets/Sevish_-__Flowers__short_edit.mp3",
-                title = "Flowers (Microtonal Groove)",
-                artist = "Sevish",
-                album = "Golden Ratio",
-                durationMs = 142000L,
-                sizeBytes = 2900000L
-            ),
-            AudioTrack(
-                id = "music_demo_piano",
-                uri = "https://commondatastorage.googleapis.com/codeskulptor-assets/sounddogs/soundtrack.mp3",
-                title = "Acoustic Reflection",
-                artist = "Classical Piano Duo",
-                album = "Quiet Horizons",
-                durationMs = 120000L,
-                sizeBytes = 2400000L
-            )
+    private val customStreamUrls = mutableListOf<AudioTrack>()
+
+    fun addOnlineStream(title: String, artist: String, streamUrl: String) {
+        val newTrack = AudioTrack(
+            id = "stream_${System.currentTimeMillis()}",
+            uri = streamUrl.trim(),
+            title = title.ifBlank { "Online Stream" },
+            artist = artist.ifBlank { "Streaming Radio / Music" },
+            album = "Online Streams",
+            durationMs = 0L,
+            sizeBytes = 0L
         )
+        customStreamUrls.add(newTrack)
+        _tracks.value = _tracks.value + newTrack
     }
+
+    fun addCustomStream(title: String, url: String, artist: String = "Online Radio") {
+        addOnlineStream(title, artist, url)
+    }
+
+    private fun getCustomStreamTracks(): List<AudioTrack> = customStreamUrls.toList()
 
     fun getOpenSourceLibraryTracks(): List<AudioTrack> {
         return listOf(

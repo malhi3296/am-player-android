@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Lock
@@ -115,40 +116,78 @@ fun MusicScreen(
     tracks: List<AudioTrack>,
     playerManager: MusicPlayerManager,
     musicRepository: MusicRepository? = null,
+    settingsRepository: com.example.data.repository.SettingsRepository? = null,
     onRescan: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val playerState by playerManager.state.collectAsState()
     val eqState by playerManager.eqState.collectAsState()
-    val isOsPermitted by (musicRepository?.isOpenSourcePermitted?.collectAsState() ?: remember { mutableStateOf(false) })
+    val settingsState by (settingsRepository?.settings?.collectAsState() ?: remember { mutableStateOf(null) })
+    val isOnlineMusicEnabled = settingsState?.onlineMusicEnabled ?: false
 
     var searchQuery by remember { mutableStateOf("") }
     var isFullScreenPlayer by remember { mutableStateOf(false) }
     var showEqualizerDialog by remember { mutableStateOf(false) }
-    var showOpenSourceDialog by remember { mutableStateOf(false) }
-    var selectedFilter by remember { mutableStateOf("All") }
+    var showAddStreamDialog by remember { mutableStateOf(false) }
+
+    // View modes: "Songs", "Albums", "Artists", "Folders"
+    var viewMode by remember { mutableStateOf("Songs") }
+    var selectedAlbum by remember { mutableStateOf<String?>(null) }
+    var selectedArtist by remember { mutableStateOf<String?>(null) }
+    var selectedFolder by remember { mutableStateOf<String?>(null) }
+
+    // Sorting: "A-Z", "Z-A", "Duration", "Artist"
+    var sortOrder by remember { mutableStateOf("A-Z") }
+    var showSortMenu by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
 
-    // Handle back button when full screen player is open
-    BackHandler(enabled = isFullScreenPlayer) {
-        isFullScreenPlayer = false
+    // Handle back button when full screen player or sub-view is open
+    BackHandler(enabled = isFullScreenPlayer || selectedAlbum != null || selectedArtist != null || selectedFolder != null) {
+        when {
+            isFullScreenPlayer -> isFullScreenPlayer = false
+            selectedAlbum != null -> selectedAlbum = null
+            selectedArtist != null -> selectedArtist = null
+            selectedFolder != null -> selectedFolder = null
+        }
     }
 
-    val filteredTracks = tracks.filter { track ->
-        val matchesSearch = searchQuery.isBlank() ||
-                track.title.contains(searchQuery, ignoreCase = true) ||
-                track.artist.contains(searchQuery, ignoreCase = true)
-        val matchesCategory = when (selectedFilter) {
-            "Open Source" -> track.id.startsWith("os_")
-            "Local / Demo" -> !track.id.startsWith("os_")
-            else -> true
+    val visibleTracks = remember(tracks, selectedAlbum, selectedArtist, selectedFolder, viewMode) {
+        when {
+            selectedAlbum != null -> tracks.filter { it.album.equals(selectedAlbum, ignoreCase = true) }
+            selectedArtist != null -> tracks.filter { it.artist.equals(selectedArtist, ignoreCase = true) }
+            selectedFolder != null -> tracks.filter { it.folderName.equals(selectedFolder, ignoreCase = true) }
+            else -> tracks
         }
-        matchesSearch && matchesCategory
+    }
+
+    val filteredTracks = remember(visibleTracks, searchQuery, sortOrder) {
+        val searched = visibleTracks.filter { track ->
+            searchQuery.isBlank() ||
+                    track.title.contains(searchQuery, ignoreCase = true) ||
+                    track.artist.contains(searchQuery, ignoreCase = true) ||
+                    track.album.contains(searchQuery, ignoreCase = true)
+        }
+        when (sortOrder) {
+            "A-Z" -> searched.sortedBy { it.title.lowercase() }
+            "Z-A" -> searched.sortedByDescending { it.title.lowercase() }
+            "Duration" -> searched.sortedByDescending { it.durationMs }
+            "Artist" -> searched.sortedBy { it.artist.lowercase() }
+            else -> searched
+        }
+    }
+
+    val albums = remember(tracks) {
+        tracks.groupBy { it.album }.map { (album, songList) -> album to songList }
+    }
+    val artists = remember(tracks) {
+        tracks.groupBy { it.artist }.map { (artist, songList) -> artist to songList }
+    }
+    val audioFolders = remember(tracks) {
+        tracks.groupBy { it.folderName }.map { (folder, songList) -> folder to songList }
     }
 
     if (isFullScreenPlayer && playerState.currentTrack != null) {
-        // FULL SCREEN ADVANCED MUSIC PLAYER
         AdvancedFullScreenPlayer(
             track = playerState.currentTrack!!,
             playerState = playerState,
@@ -158,7 +197,6 @@ fun MusicScreen(
             onOpenEqualizer = { showEqualizerDialog = true }
         )
     } else {
-        // STANDARD MUSIC SCREEN VIEW
         Box(modifier = modifier.fillMaxSize().testTag("music_screen")) {
             Column(
                 modifier = Modifier
@@ -167,31 +205,63 @@ fun MusicScreen(
             ) {
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Music Section Header
+                // Music Section Header - Clean heading without subheadings (Item 13)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    if (selectedAlbum != null || selectedArtist != null || selectedFolder != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = {
+                                selectedAlbum = null
+                                selectedArtist = null
+                                selectedFolder = null
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = selectedAlbum ?: selectedArtist ?: selectedFolder ?: "Music",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    } else {
                         Text(
-                            text = "Music Player",
+                            text = "Music",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onBackground
                         )
-                        Text(
-                            text = "${tracks.size} Tracks • Lock-Screen Background Playback",
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (isOnlineMusicEnabled) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = AmAccentBlue.copy(alpha = 0.15f),
+                                modifier = Modifier
+                                    .clickable { showAddStreamDialog = true }
+                                    .padding(end = 6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Default.CloudDownload, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("+ Stream", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AmAccentBlue)
+                                }
+                            }
+                        }
+
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = AmAccentBlue.copy(alpha = 0.15f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue),
+                            color = if (eqState.isEnabled) AmAccentBlue else MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier
                                 .clickable { showEqualizerDialog = true }
                                 .testTag("open_equalizer_button")
@@ -203,7 +273,7 @@ fun MusicScreen(
                                 Icon(
                                     imageVector = Icons.Default.Tune,
                                     contentDescription = "Equalizer",
-                                    tint = AmAccentBlue,
+                                    tint = if (eqState.isEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -211,7 +281,7 @@ fun MusicScreen(
                                     text = "EQ",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = AmAccentBlue
+                                    color = if (eqState.isEnabled) Color.White else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -236,110 +306,210 @@ fun MusicScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Quick Filter Chips (All, Open Source Streaming, Local)
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == "All",
-                            onClick = { selectedFilter = "All" },
-                            label = { Text("All (${tracks.size})", fontSize = 12.sp) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AmAccentBlue,
-                                selectedLabelColor = Color.White
-                            )
-                        )
-                    }
-
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == "Open Source",
-                            onClick = {
-                                if (!isOsPermitted && musicRepository != null) {
-                                    showOpenSourceDialog = true
-                                } else {
-                                    selectedFilter = "Open Source"
-                                }
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Public, contentDescription = null, modifier = Modifier.size(14.dp))
-                            },
-                            label = {
-                                Text(
-                                    if (isOsPermitted) "Open Source Streams" else "Stream Open Source (Opt-In)",
-                                    fontSize = 12.sp
+                // View Modes: Songs, Albums, Artists, Folders (Item 32)
+                if (selectedAlbum == null && selectedArtist == null && selectedFolder == null) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        listOf("Songs", "Albums", "Artists", "Folders").forEach { mode ->
+                            val isSelected = viewMode == mode
+                            item {
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { viewMode = mode },
+                                    label = { Text(mode, fontSize = 12.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = AmAccentBlue,
+                                        selectedLabelColor = Color.White
+                                    )
                                 )
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = AmAccentBlue,
-                                selectedLabelColor = Color.White
-                            )
-                        )
+                            }
+                        }
                     }
 
-                    item {
-                        FilterChip(
-                            selected = selectedFilter == "Local / Demo",
-                            onClick = { selectedFilter = "Local / Demo" },
-                            label = { Text("Local / Audio Tracks", fontSize = 12.sp) }
-                        )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                // Search Bar + Sort Action
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Search songs, artists, albums...", fontSize = 13.sp) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Search, contentDescription = "Search", tint = AmAccentBlue)
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AmAccentBlue,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("music_search_input")
+                    )
+
+                    if (viewMode == "Songs" || selectedAlbum != null || selectedArtist != null || selectedFolder != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier
+                                .clickable {
+                                    sortOrder = when (sortOrder) {
+                                        "A-Z" -> "Z-A"
+                                        "Z-A" -> "Duration"
+                                        "Duration" -> "Artist"
+                                        else -> "A-Z"
+                                    }
+                                }
+                        ) {
+                            Text(
+                                text = sortOrder,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AmAccentBlue,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp)
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Search Bar
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search songs, artists, classical...", fontSize = 13.sp) },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Icons.Default.Search,
-                            contentDescription = "Search",
-                            tint = AmAccentBlue
-                        )
-                    },
-                    trailingIcon = {
-                        if (searchQuery.isNotEmpty()) {
-                            IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
-                            }
-                        }
-                    },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AmAccentBlue,
-                        unfocusedBorderColor = MaterialTheme.colorScheme.outline
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("music_search_input")
-                )
-
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Tracks List
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                ) {
-                    itemsIndexed(filteredTracks, key = { _, item -> item.id }) { index, track ->
-                        val isCurrent = playerState.currentTrack?.id == track.id
-                        MusicTrackItem(
-                            index = index + 1,
-                            track = track,
-                            isPlaying = isCurrent && playerState.isPlaying,
-                            isSelected = isCurrent,
-                            onClick = {
-                                playerManager.playTrack(track, filteredTracks)
+                // Content View according to active mode
+                when {
+                    selectedAlbum != null || selectedArtist != null || selectedFolder != null || viewMode == "Songs" -> {
+                        // Songs List
+                        if (filteredTracks.isEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .weight(1f),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("No audio tracks found on device", color = Color.Gray, fontSize = 13.sp)
                             }
-                        )
+                        } else {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxWidth()
+                            ) {
+                                itemsIndexed(filteredTracks, key = { _, item -> item.id }) { index, track ->
+                                    val isCurrent = playerState.currentTrack?.id == track.id
+                                    MusicTrackItem(
+                                        index = index + 1,
+                                        track = track,
+                                        isPlaying = isCurrent && playerState.isPlaying,
+                                        isSelected = isCurrent,
+                                        onClick = {
+                                            playerManager.playTrack(track, filteredTracks)
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    viewMode == "Albums" -> {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f).fillMaxWidth()
+                        ) {
+                            items(albums, key = { it.first }) { (albumName, albumTracks) ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedAlbum = albumName }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Album, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(32.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(albumName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                                            Text("${albumTracks.size} songs", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    viewMode == "Artists" -> {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f).fillMaxWidth()
+                        ) {
+                            items(artists, key = { it.first }) { (artistName, artistTracks) ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedArtist = artistName }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(32.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(artistName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                                            Text("${artistTracks.size} songs", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    viewMode == "Folders" -> {
+                        LazyColumn(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f).fillMaxWidth()
+                        ) {
+                            items(audioFolders, key = { it.first }) { (folderName, folderTracks) ->
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surfaceVariant,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedFolder = folderName }
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(Icons.Default.Folder, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(32.dp))
+                                        Spacer(modifier = Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(folderName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                                            Text("${folderTracks.size} songs", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -387,53 +557,74 @@ fun MusicScreen(
         )
     }
 
-    // OPEN SOURCE STREAMING PERMISSION DIALOG
-    if (showOpenSourceDialog && musicRepository != null) {
+    // ADD ONLINE STREAMING TRACK / PLAYLIST DIALOG
+    if (showAddStreamDialog && musicRepository != null) {
+        var streamTitle by remember { mutableStateOf("") }
+        var streamUrl by remember { mutableStateOf("") }
+
         AlertDialog(
-            onDismissRequest = { showOpenSourceDialog = false },
+            onDismissRequest = { showAddStreamDialog = false },
             containerColor = SaCardBgElevated,
             shape = RoundedCornerShape(20.dp),
             title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CloudDownload, contentDescription = null, tint = AmAccentBlue)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Stream Open Source Music?", color = Color.White, fontWeight = FontWeight.Bold)
-                }
+                Text("Add Online Streaming Track", color = Color.White, fontWeight = FontWeight.Bold)
             },
             text = {
-                Column {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Allow AM Player to stream high-fidelity open-source and Creative Commons classical & ambient music (Beethoven, Vivaldi, Chopin, Mozart, Bach) from public archives?",
-                        fontSize = 13.sp,
-                        color = Color(0xFFA1A1AA),
-                        lineHeight = 18.sp
+                        text = "Enter a title and audio stream URL (.mp3, .aac, .m3u, .ogg):",
+                        fontSize = 12.sp,
+                        color = Color(0xFFA1A1AA)
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = streamTitle,
+                        onValueChange = { streamTitle = it },
+                        placeholder = { Text("Stream Title", fontSize = 13.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AmAccentBlue,
+                            unfocusedBorderColor = Color(0xFF3F3F46)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "• 100% Royalty Free & Legal\n• Standard internet data rates may apply\n• Can be disabled at any time",
-                        fontSize = 12.sp,
-                        color = CyanNeon
+                    OutlinedTextField(
+                        value = streamUrl,
+                        onValueChange = { streamUrl = it },
+                        placeholder = { Text("https://example.com/stream.mp3", fontSize = 13.sp) },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AmAccentBlue,
+                            unfocusedBorderColor = Color(0xFF3F3F46)
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        coroutineScope.launch {
-                            musicRepository.setOpenSourceStreamingPermitted(true)
-                            selectedFilter = "Open Source"
-                            showOpenSourceDialog = false
+                        if (streamUrl.isNotBlank()) {
+                            musicRepository.addCustomStream(
+                                title = streamTitle.ifBlank { "Online Stream" },
+                                url = streamUrl,
+                                artist = "Streaming Audio"
+                            )
                         }
+                        showAddStreamDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Allow Streaming", color = Color.White, fontWeight = FontWeight.Bold)
+                    Text("Add Stream", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showOpenSourceDialog = false }) {
-                    Text("Stay Offline", color = Color(0xFFA1A1AA))
+                TextButton(onClick = { showAddStreamDialog = false }) {
+                    Text("Cancel", color = Color(0xFFA1A1AA))
                 }
             }
         )

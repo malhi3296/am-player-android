@@ -39,12 +39,12 @@ You can download and install the latest compiled release APK directly on any And
 | 🔒 Secret Video Vault | 📺 IPTV Live Streamer |
 |:---:|:---:|
 | <img src="screenshots/secret_vault.jpg" width="360" alt="Secret Video Vault Screen" /> | <img src="screenshots/iptv_streamer.jpg" width="360" alt="IPTV Streamer Screen" /> |
-| *5-tap unlock, 4-digit PIN/Biometric lock & private video manager* | *Multi-category M3U playlist streaming with live badges* |
+| *5-tap unlock, secure 4-digit PIN lock, custom folders & private video manager* | *Multi-category TV & Radio M3U playlist streaming with live badges* |
 
 | ⚙️ Minimal Settings Page |
 |:---:|
 | <img src="screenshots/settings_screen.jpg" width="360" alt="Settings Screen" /> |
-| *"Made with love by Arwinder Singh Malhi" & 7 minimal categories* |
+| *"Made with love by Arwinder Singh Malhi" (animated heart), color picker & categorized controls* |
 
 ---
 
@@ -54,8 +54,9 @@ You can download and install the latest compiled release APK directly on any And
 Protect your personal and sensitive videos with a built-in security vault hidden right behind the app logo:
 - **5-Tap Gesture Trigger**: Tapping the top-left AM Player main logo **5 times in a row** opens the secret vault.
 - **Interactive Countdown**: Toasts guide the user on taps 2, 3, and 4 (*"Tap X more times to open Secret Vault"*).
-- **First-Time Setup**: Prompts the user to set a 4-digit PIN with confirmation and optional system biometric authentication.
-- **PIN & Biometric Unlock**: Keypad entry with dot indicators and one-tap fingerprint/face unlock.
+- **First-Time Setup**: Prompts the user to set a secure 4-digit PIN with confirmation.
+- **PIN Unlock**: Keypad entry with dot indicators (strictly PIN-based for maximum security).
+- **Custom Vault Folders**: Create, manage, and categorize hidden videos into custom folders inside the vault.
 - **Hide Any Video**: Browse and lock any video from device storage—hidden videos immediately vanish from the public library, folders, and search results.
 - **Direct Playback**: Watch locked videos inside AM Player directly from the vault without unhiding them.
 - **One-Tap Restore**: Restore any video back to the public library with a single tap.
@@ -63,70 +64,69 @@ Protect your personal and sensitive videos with a built-in security vault hidden
 
 ---
 
-### 2. 📺 IPTV Live Streamer & Multi-Playlist Folders
-Stream live TV channels and IPTV feeds with zero buffering and organized folder management:
-- **HLS & M3U8 Streaming**: Low-latency live video playback powered by AndroidX Media3 HLS engine.
-- **Multi-Category Filtering**: Quick filter chips for *All*, *Sports*, *News*, *Movies*, and *Tech & 4K*.
-- **Custom M3U Playlists**: Add custom M3U/M3U8 URLs with customizable folder names, icons, and accent colors.
-- **Live Stream Badges**: Real-time *LIVE* indicator pills with resolution (1080p, 720p, 4K) and frame rate (60fps).
-- **Player Screen Lock**: Lock controls during live streaming to prevent accidental touches.
-- **Color Modes**: Switch between *Normal*, *Vivid*, *Cinema*, and *HDR Boost* for live video streams.
+---
+
+### 2. 📺 IPTV Live Streamer & Radio Channels
+Stream live TV channels and radio feeds with organized folder management:
+- **Default TV & Radio Playlists**: Pre-configured with official TV (`tv_channels.m3u`) and Radio (`tv_radio.m3u`) streams.
+- **Searchable Online Playlists**: Small search option in "Add M3U" to quickly search and select verified public playlist feeds.
+- **Folder Categorization**: Separate folders per M3U playlist with clean, uniform accent-colored icons (no rainbow folders).
+- **Zero Background Playback**: Videos and IPTV streams instantly stop on pressing back or switching screens.
+- **HLS & Live Badges**: Real-time *LIVE* indicator pills with resolution (1080p, 720p, 4K) and frame rate.
+- **Full Landscape Mode**: Opens automatically in landscape orientation for an immersive cinema view.
 
 ---
 
 ### 3. 🎵 Advanced Music Player & High-Fidelity Audio
 An audio engine designed for audiophiles with instant responsiveness:
-- **Instantaneous Play, Pause & Skipping**: Zero-latency optimistic UI state updates ensure 0ms delay when tapping play, pause, next, or previous.
-- **Lock-Screen & Background Playback**: Native `WAKE_MODE_LOCAL` keeps the CPU active for uninterrupted music streaming even when the phone screen is locked.
-- **Full-Screen Vinyl Visualizer**: Gorgeous rotating vinyl record disc with radial glow and real-time audio spectrum equalizer bars.
-- **5-Band Equalizer & Bass Boost**: Hardware audio effect presets including *Balanced*, *Bass Boost*, *Rock*, *Pop*, *Jazz*, *Electronic*, *Vocal Clarity*, and *Classical*.
-- **Volume Boost (+10 dB)**: Native `LoudnessEnhancer` boosts volume up to **200%** for quiet recordings.
-- **Open-Source Music Streaming**: Opt-in streaming of royalty-free classical and ambient masterpieces from public archives.
-- **Persistent Mini-Player**: Bottom bar with progress indicator, play/pause, and next controls that stays accessible across tabs.
+- **Multiple Browsing Views**: View and sort music library as **Songs**, **Albums**, **Artists**, or **Folders**.
+- **Bidirectional Sorting**: Sort tracks by Name (A-Z, Z-A), Duration, or Artist.
+- **Notification Drawer Controls**: Media controls in notification shade for seamless background playback.
+- **Audiophile Engine**: 5-band Equalizer and Bass Boost (off by default for pure flat audio response).
+- **Online Music Streaming**: Streaming option off by default; enable via Settings with option to add custom online streams.
+- **Full-Screen Vinyl Visualizer**: Rotating vinyl disc with radial glow, audio spectrum equalizer bars, and persistent mini-player.
 
 ---
 
-### 4. 📁 Video Library & Folder Management
+### 4. 📁 Video Library & File Management
 Organize, browse, and manage device videos with speed and flexibility:
-- **3-Column Grid View & Vertical List View**: One-tap toggle between a spacious 3-column folder grid and a detailed vertical folder list (`SaFolderListItem`).
-- **Recent Video Folder Highlight**: The folder containing your most recently played video is subtly highlighted with an electric blue border, background wash, and a **"RECENT ACTIVITY"** tag.
-- **Lightest Pink Play Button**: Soft blush pink squircle floating action button (`#FFD8E4`) with electric blue play icon positioned right above Settings to instantly resume your last played video.
-- **Cleaned Top Bar**: Removed redundant top tabs and duplicate icons, keeping only the primary top-left brand logo (with 5-tap vault access) and action buttons.
-- **Live Search**: Instant reactive search filtering across folder names and video titles.
-- **8 Bidirectional Sort Options**:
-  - 🔤 **Name (A to Z)** & **Name (Z to A)**
-  - ⏱️ **Date (Newest First)** & **Date (Oldest First)**
-  - 📦 **File Size (Largest First)** & **File Size (Smallest First)**
-  - 🎞️ **Video Count (Most Videos)** & **Video Count (Fewest Videos)**
+- **Zero Sample Media**: Displays exclusively actual media files stored on the user's phone.
+- **Synced Grid / List View**: If folders are in grid view, videos inside are also in grid view (and vice-versa).
+- **Multi-Select Video Deletion**: Select multiple videos and delete them from device storage with confirmation.
+- **Subtle Recent Indicator**: Small red indicator dot on top-right of recent folder; clean transparent background in light and dark modes.
+- **Redesigned Quick-Resume FAB**: Clean accent-colored circle button with a crisp white play icon.
+- **Clean Interface**: Pure headers without distracting subheadings or folder clutter when viewing folder contents.
 
 ---
 
-### 5. ⚙️ Minimal, Categorized Settings
-A clean, organized settings experience with persistent storage:
-- **"Made with love by Arwinder Singh Malhi"**: Prominent banner with a red heart at the top of the Settings screen.
-- **7 Minimal Categories**:
-  1. 🎨 **Appearance**: OLED Pitch-Black Mode (`#000000`), AM Electric Blue accent palette (`#4D6BFE`), 50% opacity logo in dark mode.
-  2. 🎬 **Media library**: Re-index media files button with feedback, cache cleaner with real-time feedback, startup auto-scan toggle.
-  3. ▶️ **Player**: Double-tap seek interval selection (5s, 10s, 15s, 30s), auto-resume toggle, gesture controls overview.
-  4. 💾 **Decoder**: GPU hardware acceleration (HW+) priority, software engine (SW) fallback, video color profile selector (*Normal*, *Vivid*, *Cinema*, *HDR Boost*).
-  5. 🎵 **Audio**: Audio boost toggle (+10 dB / 200%), play music when phone is locked toggle, equalizer preset selector.
-  6. 💬 **Subtitle**: Subtitle encoding dialog (*UTF-8*, *ISO-8859-1*, *Windows-1252*, *ASCII*), online providers toggle, subtitle text size selector.
-  7. ℹ️ **About**: App version 2.4.0, technical specifications, and author credits.
-- **Full SharedPreferences Persistence**: Backed by `SettingsRepository` so every toggle and preference is saved across app restarts.
+### 5. ⚙️ Categorized Settings & Customization
+An extensive customization suite with persistent configuration:
+- **Distinct Category Headers**: Uppercase, non-clickable category titles with dividers that cannot be accidentally tapped.
+- **Dynamic Accent Color Picker**: Choose custom brand accent colors (Electric Blue, Emerald, Crimson, Amber, Purple, Coral, Cyan) applied across the entire app.
+- **Animated Fluttering Heart**: Tapping *"Made with love by Arwinder Singh Malhi"* triggers a sweet heart flutter animation.
+- **Functional Sliders & Toggles**:
+  - Logo dark mode opacity slider (20% – 100%).
+  - Gesture controls master toggle.
+  - Double-tap seek duration (5s, 10s, 15s, 30s).
+- **Pro Features**:
+  - Seekbar styles (Classic, Thin, Glow, Gradient).
+  - MPV engine profiles (Default, High Quality, Low Latency, Battery Saver).
+  - Export & import settings to JSON.
+  - Cache cleaner with exact calculated storage freed.
+  - Subtitle styling and online providers.
+  - Device info & open-source licenses dialog.
+  - Donation dialog with UPI ID `8288909927@airtel` and embedded QR code (`upi_qr_code.jpg`).
 
 ---
 
 ### 6. 🎬 Video Player Engine & Touch Gestures
 Built on AndroidX Media3 for fluid, low-latency playback:
-- **Touch Gestures**:
-  - **Left Edge Swipe**: Adjust screen brightness (0% – 100%).
-  - **Right Edge Swipe**: Adjust media volume and audio boost (0% – 200%).
-  - **Horizontal Swipe**: Frame-accurate timeline seeking with offset HUD.
-  - **Double Tap (Left / Right)**: Instant seek backward / forward (configurable).
-  - **Double Tap (Center)**: Quick play / pause.
-  - **Long Press**: 2.0x Fast-forward boost.
-  - **Two-Finger Tap**: Instantly cycle aspect ratios (Fit, Fill, Stretch, 16:9, 4:3, Zoom).
-- **Subtitles Engine**: Automatic 64-bit hash lookup on OpenSubtitles, SubDL, and Subscene; manual subtitle file picker; and sync delay adjustment (-5.0s to +5.0s).
+- **Pixel-Perfect Player UI**: Matches the modern layout with top back bar, title, lock, aspect ratio, audio track selector, subtitle track selector, and menu.
+- **Landscape Default**: Automatically opens video and IPTV in landscape orientation.
+- **Audio & Subtitle Track Selectors**: Easily switch between embedded audio languages and subtitle tracks.
+- **Double-Tap Seek Ripple Animation**: Fluid curved animated ripple rings when seeking forward or backward.
+- **Notification Drawer Controls**: Video controls in Android notification bar for convenient media management.
+- **Zero Background Video Playback**: Cleanly halts and releases playback immediately upon navigating back.
 - **Picture-in-Picture (PiP)**: Seamless floating video window when multitasking.
 
 ---

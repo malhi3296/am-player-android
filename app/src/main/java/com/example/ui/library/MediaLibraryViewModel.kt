@@ -35,8 +35,7 @@ data class FolderUiModel(
     val videoCount: Int,
     val totalSizeBytes: Long,
     val latestTimestamp: Long,
-    val hasRecentVideo: Boolean,
-    val badgeNumber: Int?
+    val hasRecentVideo: Boolean
 )
 
 data class LibraryUiState(
@@ -45,13 +44,15 @@ data class LibraryUiState(
     val isScanning: Boolean = false,
     val viewMode: ViewMode = ViewMode.GRID,
     val sortOption: SortOption = SortOption.NAME_ASC,
-    val hasPermission: Boolean = true
+    val hasPermission: Boolean = true,
+    val isSelectionMode: Boolean = false,
+    val selectedVideoIds: Set<String> = emptySet()
 )
 
 class MediaLibraryViewModel(application: Application) : AndroidViewModel(application) {
 
     private val container = (application as AMPlayerApplication).container
-    private val mediaRepo = container.mediaRepository
+    val mediaRepo = container.mediaRepository
     val vaultRepository: VaultRepository = container.vaultRepository
 
     private val _uiState = MutableStateFlow(LibraryUiState())
@@ -76,14 +77,26 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
         recentList.filter { !hiddenIds.contains(it.id) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
-    // Reactive Folders list with Search and Sorting applied!
+    // Accurately tracks last played video, persisted across force close
+    val lastPlayedVideo: StateFlow<MediaItemEntity?> = combine(
+        allMedia,
+        recentMedia
+    ) { mediaList, recentList ->
+        val savedId = mediaRepo.getLastPlayedVideoId()
+        if (savedId != null) {
+            mediaList.firstOrNull { it.id == savedId } ?: recentList.firstOrNull() ?: mediaList.firstOrNull()
+        } else {
+            recentList.firstOrNull() ?: mediaList.firstOrNull()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), null)
+
+    // Reactive Folders list with Search and Sorting applied
     val folders: StateFlow<List<FolderUiModel>> = combine(
         allMedia,
-        recentMedia,
+        lastPlayedVideo,
         _uiState
-    ) { mediaList, recentList, state ->
+    ) { mediaList, lastVideo, state ->
         val query = state.searchQuery.trim()
-        val mostRecentVideo = recentList.firstOrNull()
 
         // 1. Group by folder name
         val grouped = mediaList.groupBy { it.folderName }
@@ -92,17 +105,14 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
             val count = videos.size
             val totalSize = videos.sumOf { it.sizeBytes }
             val latestTime = videos.maxOfOrNull { it.lastPlayedTimestamp } ?: 0L
-            val hasRecent = mostRecentVideo != null && mostRecentVideo.folderName == folderName
-            val hasUnwatched = videos.any { it.playbackPositionMs == 0L }
-            val badge = if (folderName.contains("WhatsApp", ignoreCase = true)) 17 else if (hasUnwatched) count else null
+            val hasRecent = lastVideo != null && lastVideo.folderName == folderName
 
             FolderUiModel(
                 name = folderName,
                 videoCount = count,
                 totalSizeBytes = totalSize,
                 latestTimestamp = latestTime,
-                hasRecentVideo = hasRecent,
-                badgeNumber = badge
+                hasRecentVideo = hasRecent
             )
         }
 
@@ -171,8 +181,14 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
+    fun recordVideoClick(id: String) {
+        viewModelScope.launch {
+            mediaRepo.recordPlaybackStart(id)
+        }
+    }
+
     fun setSelectedFolder(folder: String?) {
-        _uiState.update { it.copy(selectedFolder = folder) }
+        _uiState.update { it.copy(selectedFolder = folder, isSelectionMode = false, selectedVideoIds = emptySet()) }
     }
 
     fun setSearchQuery(query: String) {
@@ -194,6 +210,31 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
         if (granted) rescan()
     }
 
+    fun toggleSelectionMode(enabled: Boolean) {
+        _uiState.update { it.copy(isSelectionMode = enabled, selectedVideoIds = if (!enabled) emptySet() else it.selectedVideoIds) }
+    }
+
+    fun toggleVideoSelection(id: String) {
+        _uiState.update {
+            val updated = if (id in it.selectedVideoIds) it.selectedVideoIds - id else it.selectedVideoIds + id
+            it.copy(selectedVideoIds = updated, isSelectionMode = updated.isNotEmpty())
+        }
+    }
+
+    fun selectAllVideos(ids: List<String>) {
+        _uiState.update { it.copy(selectedVideoIds = ids.toSet(), isSelectionMode = true) }
+    }
+
+    fun deleteSelectedVideos() {
+        val toDelete = _uiState.value.selectedVideoIds.toList()
+        if (toDelete.isNotEmpty()) {
+            viewModelScope.launch {
+                mediaRepo.deleteMediaItems(toDelete)
+                _uiState.update { it.copy(isSelectionMode = false, selectedVideoIds = emptySet()) }
+            }
+        }
+    }
+
     fun toggleFavorite(item: MediaItemEntity) {
         viewModelScope.launch {
             mediaRepo.toggleFavorite(item.id, !item.isFavorite)
@@ -203,6 +244,7 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
     fun importMediaUri(uri: Uri, onReady: (String) -> Unit) {
         viewModelScope.launch {
             val item = mediaRepo.resolveMediaFromUri(uri)
+            recordVideoClick(item.id)
             onReady(item.id)
         }
     }
