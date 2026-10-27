@@ -81,6 +81,16 @@ class IptvRepository(private val context: Context? = null) {
         )
         initialFolders.add(radioFolder)
 
+        // 3. IPTV-Org World Index Folder
+        val worldFolder = IptvPlaylistFolder(
+            id = "folder_iptv_world",
+            name = "IPTV-Org World Index",
+            colorHex = UNIFORM_FOLDER_COLOR,
+            iconName = "globe",
+            channels = emptyList()
+        )
+        initialFolders.add(worldFolder)
+
         _folders.value = initialFolders
         _channels.value = initialFolders.flatMap { it.channels }
 
@@ -91,6 +101,17 @@ class IptvRepository(private val context: Context? = null) {
     }
 
     private suspend fun refreshRemotePlaylists() {
+        try {
+            // Fetch World Index
+            val worldReq = Request.Builder().url("https://iptv-org.github.io/iptv/index.m3u").build()
+            val worldResp = httpClient.newCall(worldReq).execute()
+            if (worldResp.isSuccessful && worldResp.body != null) {
+                val worldParsed = parseM3u(worldResp.body!!.string(), "World Index")
+                if (worldParsed.isNotEmpty()) {
+                    updateFolderChannels("folder_iptv_world", worldParsed.take(200))
+                }
+            }
+        } catch (_: Exception) {}
         try {
             // Refresh TV
             val tvRequest = Request.Builder().url(DEFAULT_TV_M3U_URL).build()
@@ -130,9 +151,51 @@ class IptvRepository(private val context: Context? = null) {
     fun getSuggestedOnlinePlaylists(): List<SuggestedPlaylist> {
         return listOf(
             SuggestedPlaylist(
+                title = "IPTV-Org World Index",
+                description = "Thousands of public broadcast channels categorized globally",
+                url = "https://iptv-org.github.io/iptv/index.m3u",
+                isRadio = false
+            ),
+            SuggestedPlaylist(
                 title = "TV Garden Channels (Official)",
                 description = "Curated worldwide news, entertainment & live television",
                 url = DEFAULT_TV_M3U_URL,
+                isRadio = false
+            ),
+            SuggestedPlaylist(
+                title = "TV Garden Radio (Official)",
+                description = "Global FM, talk, cultural & public radio broadcasts",
+                url = DEFAULT_RADIO_M3U_URL,
+                isRadio = true
+            ),
+            SuggestedPlaylist(
+                title = "YuppTV & Desi Channels",
+                description = "South Asian public entertainment, regional news & broadcasts",
+                url = "https://iptv-org.github.io/iptv/languages/hin.m3u",
+                isRadio = false
+            ),
+            SuggestedPlaylist(
+                title = "PiShow Global Entertainment",
+                description = "Free international comedy, drama, and lifestyle channels",
+                url = "https://iptv-org.github.io/iptv/categories/entertainment.m3u",
+                isRadio = false
+            ),
+            SuggestedPlaylist(
+                title = "RunnTV Movies & Series",
+                description = "Continuous live classic movies, retro cinema, and shows",
+                url = "https://iptv-org.github.io/iptv/categories/movies.m3u",
+                isRadio = false
+            ),
+            SuggestedPlaylist(
+                title = "Samsung TV Plus Free Streams",
+                description = "Curated television networks from Samsung TV Plus",
+                url = "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/us_samsung.m3u",
+                isRadio = false
+            ),
+            SuggestedPlaylist(
+                title = "Pluto TV Broadcasts",
+                description = "Live themed 24/7 networks & public streaming channels",
+                url = "https://raw.githubusercontent.com/iptv-org/iptv/master/streams/us_pluto.m3u",
                 isRadio = false
             ),
             SuggestedPlaylist(

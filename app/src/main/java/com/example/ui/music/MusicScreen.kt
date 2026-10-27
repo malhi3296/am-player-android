@@ -103,13 +103,14 @@ import com.example.player.MusicPlayerManager
 import com.example.player.MusicPlayerState
 import com.example.player.RepeatState
 import com.example.ui.player.components.formatTime
-import com.example.ui.theme.AmAccentBlue
 import com.example.ui.theme.BoostOrange
 import com.example.ui.theme.CyanNeon
 import com.example.ui.theme.PurpleNeon
 import com.example.ui.theme.SaCardBg
 import com.example.ui.theme.SaCardBgElevated
 import kotlinx.coroutines.launch
+
+
 
 @Composable
 fun MusicScreen(
@@ -243,7 +244,7 @@ fun MusicScreen(
                         if (isOnlineMusicEnabled) {
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = AmAccentBlue.copy(alpha = 0.15f),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
                                 modifier = Modifier
                                     .clickable { showAddStreamDialog = true }
                                     .padding(end = 6.dp)
@@ -252,16 +253,16 @@ fun MusicScreen(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.CloudDownload, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(14.dp))
+                                    Icon(Icons.Default.CloudDownload, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(14.dp))
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text("+ Stream", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = AmAccentBlue)
+                                    Text("+ Stream", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                                 }
                             }
                         }
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (eqState.isEnabled) AmAccentBlue else MaterialTheme.colorScheme.surfaceVariant,
+                            color = if (eqState.isEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                             modifier = Modifier
                                 .clickable { showEqualizerDialog = true }
                                 .testTag("open_equalizer_button")
@@ -320,7 +321,7 @@ fun MusicScreen(
                                     onClick = { viewMode = mode },
                                     label = { Text(mode, fontSize = 12.sp) },
                                     colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = AmAccentBlue,
+                                        selectedContainerColor = MaterialTheme.colorScheme.primary,
                                         selectedLabelColor = Color.White
                                     )
                                 )
@@ -341,7 +342,7 @@ fun MusicScreen(
                         onValueChange = { searchQuery = it },
                         placeholder = { Text("Search songs, artists, albums...", fontSize = 13.sp) },
                         leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = "Search", tint = AmAccentBlue)
+                            Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
                         },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
@@ -353,7 +354,7 @@ fun MusicScreen(
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         ),
                         modifier = Modifier
@@ -380,7 +381,7 @@ fun MusicScreen(
                                 text = sortOrder,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = AmAccentBlue,
+                                color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp)
                             )
                         }
@@ -442,7 +443,7 @@ fun MusicScreen(
                                         modifier = Modifier.padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.Album, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(32.dp))
+                                        Icon(Icons.Default.Album, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(albumName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
@@ -471,7 +472,7 @@ fun MusicScreen(
                                         modifier = Modifier.padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(32.dp))
+                                        Icon(Icons.Default.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(artistName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
@@ -500,7 +501,7 @@ fun MusicScreen(
                                         modifier = Modifier.padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.Folder, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(32.dp))
+                                        Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(32.dp))
                                         Spacer(modifier = Modifier.width(12.dp))
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(folderName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
@@ -583,7 +584,7 @@ fun MusicScreen(
                         placeholder = { Text("Stream Title", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -596,7 +597,7 @@ fun MusicScreen(
                         placeholder = { Text("https://example.com/stream.mp3", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -616,7 +617,7 @@ fun MusicScreen(
                         }
                         showAddStreamDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Add Stream", color = Color.White, fontWeight = FontWeight.Bold)
@@ -697,7 +698,7 @@ fun AdvancedFullScreenPlayer(
                         text = "NOW PLAYING",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = AmAccentBlue,
+                        color = MaterialTheme.colorScheme.primary,
                         letterSpacing = 2.sp
                     )
                     Text(
@@ -726,13 +727,13 @@ fun AdvancedFullScreenPlayer(
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                AmAccentBlue.copy(alpha = 0.35f),
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.35f),
                                 Color(0xFF1E1B4B),
                                 Color(0xFF0F0F1A)
                             )
                         )
                     )
-                    .border(3.dp, AmAccentBlue.copy(alpha = 0.6f), CircleShape),
+                    .border(3.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Box(
@@ -747,7 +748,7 @@ fun AdvancedFullScreenPlayer(
                     Icon(
                         imageVector = Icons.Default.Album,
                         contentDescription = "Vinyl Record",
-                        tint = AmAccentBlue,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(90.dp)
                     )
                 }
@@ -758,7 +759,7 @@ fun AdvancedFullScreenPlayer(
                         .size(28.dp)
                         .clip(CircleShape)
                         .background(Color.White)
-                        .border(2.dp, AmAccentBlue, CircleShape)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
                 )
             }
 
@@ -784,7 +785,7 @@ fun AdvancedFullScreenPlayer(
                             .height(h.dp)
                             .clip(RoundedCornerShape(3.dp))
                             .background(
-                                if (idx % 2 == 0) AmAccentBlue else CyanNeon
+                                if (idx % 2 == 0) MaterialTheme.colorScheme.primary else CyanNeon
                             )
                     )
                 }
@@ -822,7 +823,7 @@ fun AdvancedFullScreenPlayer(
                         text = "Hi-Res Audio • 24-bit 96kHz Lossless",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = AmAccentBlue,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                     )
                 }
@@ -851,8 +852,8 @@ fun AdvancedFullScreenPlayer(
                         playerManager.seekTo(target)
                     },
                     colors = SliderDefaults.colors(
-                        thumbColor = AmAccentBlue,
-                        activeTrackColor = AmAccentBlue,
+                        thumbColor = MaterialTheme.colorScheme.primary,
+                        activeTrackColor = MaterialTheme.colorScheme.primary,
                         inactiveTrackColor = Color(0x33FFFFFF)
                     ),
                     modifier = Modifier.fillMaxWidth()
@@ -903,7 +904,7 @@ fun AdvancedFullScreenPlayer(
                 // Big Play/Pause Glowing Button
                 Surface(
                     shape = CircleShape,
-                    color = AmAccentBlue,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .size(72.dp)
                         .clickable { playerManager.togglePlayPause() }
@@ -981,7 +982,7 @@ fun AdvancedFullScreenPlayer(
                         text = "Speed: ${playerState.playbackSpeed}x",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = AmAccentBlue,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
@@ -1018,7 +1019,7 @@ fun MusicEqualizerDialog(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Tune, contentDescription = null, tint = AmAccentBlue)
+                    Icon(Icons.Default.Tune, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Audio Equalizer", color = Color.White, fontWeight = FontWeight.Bold)
                 }
@@ -1026,7 +1027,7 @@ fun MusicEqualizerDialog(
                 Switch(
                     checked = eqState.isEnabled,
                     onCheckedChange = onToggleEnabled,
-                    colors = SwitchDefaults.colors(checkedThumbColor = AmAccentBlue)
+                    colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
                 )
             }
         },
@@ -1045,7 +1046,7 @@ fun MusicEqualizerDialog(
                         val isSelected = eqState.currentPreset.equals(preset.name, ignoreCase = true)
                         Surface(
                             shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) AmAccentBlue else Color(0xFF27272A),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF27272A),
                             modifier = Modifier.clickable { onSelectPreset(preset.name) }
                         ) {
                             Text(
@@ -1125,8 +1126,8 @@ fun MusicEqualizerDialog(
                         onValueChange = { onBassBoostChange(it.toInt()) },
                         valueRange = 0f..1000f,
                         colors = SliderDefaults.colors(
-                            thumbColor = AmAccentBlue,
-                            activeTrackColor = AmAccentBlue,
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary,
                             inactiveTrackColor = Color(0x33FFFFFF)
                         ),
                         modifier = Modifier.weight(1f)
@@ -1135,7 +1136,7 @@ fun MusicEqualizerDialog(
                     Text(
                         text = "${eqState.bassBoostStrength / 10}%",
                         fontSize = 10.sp,
-                        color = AmAccentBlue,
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.width(36.dp),
                         textAlign = TextAlign.End
                     )
@@ -1178,7 +1179,7 @@ fun MusicEqualizerDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Done", color = AmAccentBlue, fontWeight = FontWeight.Bold)
+                Text("Done", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         }
     )
@@ -1196,10 +1197,10 @@ private fun MusicTrackItem(
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = if (isSelected) AmAccentBlue.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+        color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (isSelected) AmAccentBlue else Color.Transparent
+            if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -1214,7 +1215,7 @@ private fun MusicTrackItem(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) AmAccentBlue else Color(0xFF23232B)),
+                    .background(if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFF23232B)),
                 contentAlignment = Alignment.Center
             ) {
                 if (isPlaying) {
@@ -1228,7 +1229,7 @@ private fun MusicTrackItem(
                     Icon(
                         imageVector = if (isOpenSource) Icons.Default.Public else Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = if (isSelected) Color.White else AmAccentBlue,
+                        tint = if (isSelected) Color.White else MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -1241,7 +1242,7 @@ private fun MusicTrackItem(
                     text = track.title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.onSurface,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -1297,7 +1298,7 @@ private fun MiniMusicPlayerBar(
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = SaCardBgElevated),
-        border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue.copy(alpha = 0.5f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
@@ -1312,13 +1313,13 @@ private fun MiniMusicPlayerBar(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(AmAccentBlue.copy(alpha = 0.2f)),
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.MusicNote,
                         contentDescription = null,
-                        tint = AmAccentBlue,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -1374,7 +1375,7 @@ private fun MiniMusicPlayerBar(
 
             LinearProgressIndicator(
                 progress = { progress },
-                color = AmAccentBlue,
+                color = MaterialTheme.colorScheme.primary,
                 trackColor = Color.Transparent,
                 modifier = Modifier
                     .fillMaxWidth()

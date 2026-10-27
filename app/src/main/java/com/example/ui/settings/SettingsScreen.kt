@@ -218,8 +218,8 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Tap to flutter heart • Version 2.4.0",
-                        fontSize = 10.sp,
+                        text = "Version 2.4.2",
+                        fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -463,6 +463,13 @@ fun SettingsScreen(
             CategoryHeader(title = "FILE BROWSER & CACHE (ITEM 18B, 18G)")
 
             SettingToggleItem(
+                title = "Show Video Thumbnails",
+                subtitle = "Generate real video frame previews in browser",
+                checked = settings.showVideoThumbnails,
+                onCheckedChange = { settingsRepository.setShowVideoThumbnails(it) }
+            )
+
+            SettingToggleItem(
                 title = "Show Hidden Video Files",
                 subtitle = "Display hidden videos and dotfiles in browser",
                 checked = settings.fileBrowserShowHidden,
@@ -584,7 +591,7 @@ fun SettingsScreen(
                             color = SuccessGreen
                         )
                         Text(
-                            text = "UPI: 8288909927@airtel • Tap for QR Code",
+                            text = "UPI: 8288909927@airtel • PayPal: malhi3296@gmail.com",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -980,6 +987,35 @@ fun SettingsScreen(
                             Column {
                                 Text("UPI ID", fontSize = 10.sp, color = Color(0xFF9E9EA7))
                                 Text(upiId, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = parseHexColor(settings.accentColorHex), modifier = Modifier.size(18.dp))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    val paypalId = "malhi3296@gmail.com"
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = SaCardBg,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, parseHexColor(settings.accentColorHex).copy(alpha = 0.5f)),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                val clip = ClipData.newPlainText("AM Player PayPal", paypalId)
+                                clipboard.setPrimaryClip(clip)
+                                Toast.makeText(context, "PayPal account copied: $paypalId", Toast.LENGTH_SHORT).show()
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text("PayPal", fontSize = 10.sp, color = Color(0xFF9E9EA7))
+                                Text(paypalId, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                             Icon(Icons.Default.ContentCopy, contentDescription = "Copy", tint = parseHexColor(settings.accentColorHex), modifier = Modifier.size(18.dp))
                         }

@@ -14,6 +14,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.layout.Box
+import com.example.ui.BottomNavTab
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
@@ -48,6 +51,7 @@ class MainActivity : ComponentActivity() {
                 com.example.ui.theme.parseHexColor(settings.accentColorHex)
             }
             var currentPlayingUri by remember { mutableStateOf(intentUri) }
+            var currentTab by rememberSaveable { mutableStateOf(BottomNavTab.HOME) }
 
             LaunchedEffect(intentUri) {
                 if (!intentUri.isNullOrEmpty()) {
@@ -59,27 +63,25 @@ class MainActivity : ComponentActivity() {
                 darkTheme = settings.isDarkMode,
                 accentColor = accentColor
             ) {
-                Crossfade(
-                    targetState = currentPlayingUri,
-                    label = "screen_transition",
-                    modifier = Modifier.fillMaxSize()
-                ) { playingUri ->
-                    if (playingUri != null) {
+                Box(modifier = Modifier.fillMaxSize()) {
+                    MainHomeScreen(
+                        libraryViewModel = libraryViewModel,
+                        container = container,
+                        isDarkMode = settings.isDarkMode,
+                        currentTab = currentTab,
+                        onTabChange = { currentTab = it },
+                        onToggleDarkMode = { container.settingsRepository.setDarkMode(it) },
+                        onPlayMedia = { selectedUri ->
+                            currentPlayingUri = selectedUri
+                        }
+                    )
+
+                    if (currentPlayingUri != null) {
                         PlayerScreen(
-                            mediaUri = playingUri,
+                            mediaUri = currentPlayingUri!!,
                             viewModel = playerViewModel,
                             onNavigateBack = {
                                 currentPlayingUri = null
-                            }
-                        )
-                    } else {
-                        MainHomeScreen(
-                            libraryViewModel = libraryViewModel,
-                            container = container,
-                            isDarkMode = settings.isDarkMode,
-                            onToggleDarkMode = { container.settingsRepository.setDarkMode(it) },
-                            onPlayMedia = { selectedUri ->
-                                currentPlayingUri = selectedUri
                             }
                         )
                     }

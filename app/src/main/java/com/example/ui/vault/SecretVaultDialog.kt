@@ -1,5 +1,6 @@
 package com.example.ui.vault
 
+import androidx.compose.material3.MaterialTheme
 import android.widget.Toast
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
@@ -69,13 +70,14 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.MediaItemEntity
 import com.example.data.repository.VaultRepository
 import com.example.ui.player.components.formatTime
-import com.example.ui.theme.AmAccentBlue
 import com.example.ui.theme.DangerRed
 import com.example.ui.theme.SaCardBg
 import com.example.ui.theme.SaCardBgElevated
 import com.example.ui.theme.SaDarkBg
 import com.example.ui.theme.SaFolderBlue
 import com.example.ui.theme.SuccessGreen
+
+
 
 private enum class VaultScreenState {
     ENTER_PIN,
@@ -141,14 +143,14 @@ fun SecretVaultDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(
                             shape = CircleShape,
-                            color = AmAccentBlue.copy(alpha = 0.2f),
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                             modifier = Modifier.size(36.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = if (screenState == VaultScreenState.VAULT_CONTENT) Icons.Default.LockOpen else Icons.Default.Lock,
                                     contentDescription = null,
-                                    tint = AmAccentBlue,
+                                    tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(20.dp)
                                 )
                             }
@@ -347,7 +349,7 @@ fun SecretVaultDialog(
                             Toast.makeText(context, "Folder created", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text("Create", color = Color.White)
                 }
@@ -376,10 +378,10 @@ fun SecretVaultDialog(
                     vaultFolders.forEach { folder ->
                         Surface(
                             shape = RoundedCornerShape(8.dp),
-                            color = if (vaultRepository.getVideoVaultFolder(targetVideo.id) == folder) AmAccentBlue.copy(alpha = 0.25f) else SaCardBg,
+                            color = if (vaultRepository.getVideoVaultFolder(targetVideo.id) == folder) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else SaCardBg,
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (vaultRepository.getVideoVaultFolder(targetVideo.id) == folder) AmAccentBlue else Color(0xFF2E2E36)
+                                if (vaultRepository.getVideoVaultFolder(targetVideo.id) == folder) MaterialTheme.colorScheme.primary else Color(0xFF2E2E36)
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -393,7 +395,7 @@ fun SecretVaultDialog(
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Folder, contentDescription = null, tint = AmAccentBlue, modifier = Modifier.size(20.dp))
+                                Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(folder, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                             }
@@ -417,7 +419,7 @@ fun SecretVaultDialog(
             Surface(
                 shape = RoundedCornerShape(24.dp),
                 color = SaCardBgElevated,
-                border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue.copy(alpha = 0.5f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight(0.85f)
@@ -503,7 +505,7 @@ fun SecretVaultDialog(
                                                 Toast.makeText(context, "Locked to '$destFolder'", Toast.LENGTH_SHORT).show()
                                             },
                                             shape = RoundedCornerShape(8.dp),
-                                            colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue)
+                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                                         ) {
                                             Icon(
                                                 imageVector = Icons.Default.Lock,
@@ -578,10 +580,10 @@ private fun PinEntryView(
                     modifier = Modifier
                         .size(18.dp)
                         .clip(CircleShape)
-                        .background(if (isFilled) AmAccentBlue else Color(0xFF2E2E36))
+                        .background(if (isFilled) MaterialTheme.colorScheme.primary else Color(0xFF2E2E36))
                         .border(
                             1.dp,
-                            if (isFilled) AmAccentBlue else Color(0xFF4A4A56),
+                            if (isFilled) MaterialTheme.colorScheme.primary else Color(0xFF4A4A56),
                             CircleShape
                         )
                 )
@@ -727,7 +729,7 @@ private fun VaultContentView(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = onOpenAddVideos,
-                    colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.testTag("add_videos_to_vault_btn")
                 ) {
@@ -760,7 +762,7 @@ private fun VaultContentView(
                         onClick = { onSelectFolder("All") },
                         label = { Text("All (${hiddenVideos.size})", fontSize = 12.sp) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = AmAccentBlue,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = Color.White,
                             containerColor = SaCardBg,
                             labelColor = Color(0xFF9E9EA7)
@@ -777,7 +779,7 @@ private fun VaultContentView(
                         },
                         label = { Text("$folder ($count)", fontSize = 12.sp) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = AmAccentBlue,
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = Color.White,
                             containerColor = SaCardBg,
                             labelColor = Color(0xFF9E9EA7)
@@ -798,7 +800,7 @@ private fun VaultContentView(
                 Icon(
                     imageVector = Icons.Default.CreateNewFolder,
                     contentDescription = "New Vault Folder",
-                    tint = AmAccentBlue,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -910,7 +912,7 @@ private fun VaultContentView(
                                     Icon(
                                         imageVector = Icons.Default.DriveFileMove,
                                         contentDescription = "Move Folder",
-                                        tint = AmAccentBlue,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -920,7 +922,7 @@ private fun VaultContentView(
                                     Icon(
                                         imageVector = Icons.Default.PlayArrow,
                                         contentDescription = "Play",
-                                        tint = AmAccentBlue,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(28.dp)
                                     )
                                 }

@@ -77,6 +77,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import android.net.Uri
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -86,15 +91,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.data.model.MediaItemEntity
-import com.example.ui.theme.AmAccentBlue
 import com.example.ui.theme.DangerRed
 import com.example.ui.vault.SecretVaultDialog
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun MediaLibraryScreen(
     viewModel: MediaLibraryViewModel,
     isDarkMode: Boolean,
     logoDarkModeOpacity: Float = 1.0f,
+    showVideoThumbnails: Boolean = true,
     onToggleDarkMode: (Boolean) -> Unit,
     onPlayMedia: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -209,7 +216,7 @@ fun MediaLibraryScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     if (uiState.selectedFolder == null) {
-                        // Root Library Header with logo
+                        // Root Library Header with logo only (Requirement: Don't show am player name with logo on home page only show logo)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -219,17 +226,11 @@ fun MediaLibraryScreen(
                             Image(
                                 painter = painterResource(id = R.drawable.am_player_logo),
                                 contentDescription = "AM Player Logo",
+                                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
                                 alpha = if (isDarkMode) logoDarkModeOpacity else 1.0f,
                                 modifier = Modifier
                                     .size(38.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                            )
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Text(
-                                text = "AM Player",
-                                fontSize = 21.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
                             )
                         }
                     } else {
@@ -264,7 +265,7 @@ fun MediaLibraryScreen(
                             Icon(
                                 imageVector = Icons.Default.Search,
                                 contentDescription = "Search",
-                                tint = if (showSearchField) AmAccentBlue else MaterialTheme.colorScheme.onBackground
+                                tint = if (showSearchField) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onBackground
                             )
                         }
 
@@ -324,7 +325,7 @@ fun MediaLibraryScreen(
                         },
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         ),
                         modifier = Modifier
@@ -338,8 +339,8 @@ fun MediaLibraryScreen(
             if (!uiState.hasPermission) {
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = AmAccentBlue.copy(alpha = 0.15f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, AmAccentBlue),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -351,7 +352,7 @@ fun MediaLibraryScreen(
                         Icon(
                             imageVector = Icons.Default.Security,
                             contentDescription = null,
-                            tint = AmAccentBlue,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
@@ -377,7 +378,7 @@ fun MediaLibraryScreen(
                                 }
                                 permissionLauncher.launch(perms)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Text("Grant", fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -482,6 +483,7 @@ fun MediaLibraryScreen(
                                 isSelectionMode = uiState.isSelectionMode,
                                 isSelected = isSelected,
                                 isDarkMode = isDarkMode,
+                                showThumbnails = showVideoThumbnails,
                                 onClick = {
                                     if (uiState.isSelectionMode) {
                                         viewModel.toggleVideoSelection(item.id)
@@ -512,6 +514,7 @@ fun MediaLibraryScreen(
                                 item = item,
                                 isSelectionMode = uiState.isSelectionMode,
                                 isSelected = isSelected,
+                                showThumbnails = showVideoThumbnails,
                                 onClick = {
                                     if (uiState.isSelectionMode) {
                                         viewModel.toggleVideoSelection(item.id)
@@ -540,7 +543,7 @@ fun MediaLibraryScreen(
                     viewModel.recordVideoClick(lastVideo!!.id)
                     onPlayMedia(lastVideo!!.id)
                 },
-                containerColor = AmAccentBlue,
+                containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = Color.White,
                 shape = CircleShape,
                 modifier = Modifier
@@ -566,7 +569,7 @@ fun MediaLibraryScreen(
                 shape = RoundedCornerShape(20.dp),
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Sort, contentDescription = null, tint = AmAccentBlue)
+                        Icon(Icons.Default.Sort, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Sort By", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                     }
@@ -592,14 +595,14 @@ fun MediaLibraryScreen(
                                         viewModel.setSortOption(option)
                                         showSortDialog = false
                                     },
-                                    colors = RadioButtonDefaults.colors(selectedColor = AmAccentBlue)
+                                    colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = option.displayName,
                                     fontSize = 14.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
@@ -607,7 +610,7 @@ fun MediaLibraryScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = { showSortDialog = false }) {
-                        Text("Close", color = AmAccentBlue)
+                        Text("Close", color = MaterialTheme.colorScheme.primary)
                     }
                 }
             )
@@ -696,7 +699,7 @@ private fun SaFolderGridItem(
             Icon(
                 imageVector = Icons.Default.Folder,
                 contentDescription = folder.name,
-                tint = AmAccentBlue,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(iconSize)
             )
 
@@ -766,7 +769,7 @@ private fun SaFolderListItem(
                 Icon(
                     imageVector = Icons.Default.Folder,
                     contentDescription = null,
-                    tint = AmAccentBlue,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(28.dp)
                 )
 
@@ -802,6 +805,52 @@ private fun SaFolderListItem(
     }
 }
 
+@Composable
+private fun VideoThumbnailImage(
+    uriString: String,
+    showThumbnails: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var bitmap by remember(uriString, showThumbnails) { mutableStateOf<android.graphics.Bitmap?>(null) }
+
+    LaunchedEffect(uriString, showThumbnails) {
+        if (!showThumbnails) return@LaunchedEffect
+        withContext(Dispatchers.IO) {
+            try {
+                val uri = Uri.parse(uriString)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    bitmap = context.contentResolver.loadThumbnail(uri, android.util.Size(320, 180), null)
+                } else {
+                    val retriever = android.media.MediaMetadataRetriever()
+                    try {
+                        retriever.setDataSource(context, uri)
+                        bitmap = retriever.getFrameAtTime(1_000_000L)
+                    } finally {
+                        retriever.release()
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+    }
+
+    if (showThumbnails && bitmap != null) {
+        Image(
+            bitmap = bitmap!!.asImageBitmap(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Default.Movie,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+            modifier = Modifier.size(28.dp)
+        )
+    }
+}
+
 /**
  * Video Item in Grid View: Clean thumbnail + Video Title ONLY (Requirement 36)
  */
@@ -811,6 +860,7 @@ private fun SaVideoGridItem(
     isSelectionMode: Boolean,
     isSelected: Boolean,
     isDarkMode: Boolean,
+    showThumbnails: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -819,7 +869,7 @@ private fun SaVideoGridItem(
         color = if (isDarkMode) MaterialTheme.colorScheme.surfaceVariant else Color.White,
         border = androidx.compose.foundation.BorderStroke(
             if (isSelected) 2.dp else 1.dp,
-            if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.outline
+            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -834,18 +884,17 @@ private fun SaVideoGridItem(
                     .background(Color(0xFF1E1E26)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Movie,
-                    contentDescription = null,
-                    tint = AmAccentBlue.copy(alpha = 0.7f),
-                    modifier = Modifier.size(32.dp)
+                VideoThumbnailImage(
+                    uriString = item.uri,
+                    showThumbnails = showThumbnails,
+                    modifier = Modifier.fillMaxSize()
                 )
 
                 if (isSelectionMode) {
                     Icon(
                         imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                         contentDescription = null,
-                        tint = if (isSelected) AmAccentBlue else Color.White,
+                        tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(6.dp)
@@ -877,6 +926,7 @@ private fun SaVideoListItem(
     item: MediaItemEntity,
     isSelectionMode: Boolean,
     isSelected: Boolean,
+    showThumbnails: Boolean = true,
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -885,7 +935,7 @@ private fun SaVideoListItem(
         color = MaterialTheme.colorScheme.surfaceVariant,
         border = androidx.compose.foundation.BorderStroke(
             if (isSelected) 1.5.dp else 1.dp,
-            if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.outline
+            if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
         ),
         modifier = Modifier
             .fillMaxWidth()
@@ -902,11 +952,10 @@ private fun SaVideoListItem(
                     .background(Color(0xFF1E1E26)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.Movie,
-                    contentDescription = null,
-                    tint = AmAccentBlue.copy(alpha = 0.8f),
-                    modifier = Modifier.size(22.dp)
+                VideoThumbnailImage(
+                    uriString = item.uri,
+                    showThumbnails = showThumbnails,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 
@@ -927,7 +976,7 @@ private fun SaVideoListItem(
                 Icon(
                     imageVector = if (isSelected) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
                     contentDescription = null,
-                    tint = if (isSelected) AmAccentBlue else MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp)
                 )
             }

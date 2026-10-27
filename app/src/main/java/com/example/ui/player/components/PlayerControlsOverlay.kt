@@ -77,6 +77,7 @@ fun PlayerControlsOverlay(
     onTimeDisplayClick: () -> Unit,
     onMoreToolsClick: () -> Unit,
     onDecoderToggle: () -> Unit = {},
+    onIptvChannelsClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val skinAccent = uiState.playerSkin.accentColor
@@ -268,13 +269,46 @@ fun PlayerControlsOverlay(
                 )
             }
 
+            
+            // Floating Quick IPTV Channels button
+            if (uiState.isIptvStream) {
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color(0xDD1F1F1F),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, skinAccent),
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 16.dp)
+                        .clickable { onIptvChannelsClick() }
+                        .testTag("iptv_floating_channels_button")
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(Color(0xFF00E676), CircleShape)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Channels",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
             // BOTTOM CONTROLS & TIMELINE (Pixel perfect matching player.jpg)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
             ) {
                 // Seekbar Row with Timestamps flanking it
                 var isDragging by remember { mutableStateOf(false) }
@@ -293,7 +327,7 @@ fun PlayerControlsOverlay(
                     // Elapsed Time (Left) e.g. "00:01"
                     Text(
                         text = formatTime(if (isDragging) (dragValue * uiState.durationMs).toLong() else uiState.currentPositionMs),
-                        fontSize = 13.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
                     )
@@ -319,7 +353,7 @@ fun PlayerControlsOverlay(
                         ),
                         modifier = Modifier
                             .weight(1f)
-                            .height(28.dp)
+                            .height(20.dp)
                             .testTag("timeline_slider")
                     )
 
@@ -350,7 +384,7 @@ fun PlayerControlsOverlay(
                     IconButton(
                         onClick = onLockToggle,
                         modifier = Modifier
-                            .size(44.dp)
+                            .size(36.dp)
                             .testTag("lock_toggle_button")
                     ) {
                         Icon(
@@ -369,13 +403,13 @@ fun PlayerControlsOverlay(
                         // Previous / Rewind 10s
                         IconButton(
                             onClick = onRewindClick,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SkipPrevious,
                                 contentDescription = "Skip Previous",
                                 tint = Color.White,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
 
@@ -383,27 +417,27 @@ fun PlayerControlsOverlay(
                         IconButton(
                             onClick = onPlayPauseClick,
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(46.dp)
                                 .testTag("play_pause_button")
                         ) {
                             Icon(
                                 imageVector = if (uiState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                                 contentDescription = if (uiState.isPlaying) "Pause" else "Play",
                                 tint = Color.White,
-                                modifier = Modifier.size(44.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                         }
 
                         // Next / Forward 10s
                         IconButton(
                             onClick = onForwardClick,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.SkipNext,
                                 contentDescription = "Skip Next",
                                 tint = Color.White,
-                                modifier = Modifier.size(32.dp)
+                                modifier = Modifier.size(26.dp)
                             )
                         }
                     }
@@ -415,7 +449,7 @@ fun PlayerControlsOverlay(
                     ) {
                         IconButton(
                             onClick = onAspectRatioClick,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AspectRatio,
@@ -427,7 +461,7 @@ fun PlayerControlsOverlay(
 
                         IconButton(
                             onClick = onPipClick,
-                            modifier = Modifier.size(44.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.PictureInPictureAlt,

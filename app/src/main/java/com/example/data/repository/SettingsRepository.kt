@@ -17,11 +17,12 @@ data class AppSettingsState(
     val hwDecodingEnabled: Boolean = true,
     val swFallbackEnabled: Boolean = true,
     val colorMode: String = "Vivid",
-    val audioBoostEnabled: Boolean = true,
+    val audioBoostEnabled: Boolean = false,
+    val showVideoThumbnails: Boolean = true,
     val playWhenLocked: Boolean = true,
     val autoResumeEnabled: Boolean = true,
     val autoScanStartup: Boolean = true,
-    val equalizerPreset: String = "Bass Boost",
+    val equalizerPreset: String = "Balanced",
     val seekDurationSeconds: Int = 10,
     val playerSeekbarStyle: String = "Classic Dot",
     val mpvProfile: String = "High Quality (HW+ / Vulkan)",
@@ -37,7 +38,6 @@ data class AppSettingsState(
 class SettingsRepository(private val context: Context) {
 
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-
     private val _settings = MutableStateFlow(loadSettings())
     val settings: StateFlow<AppSettingsState> = _settings.asStateFlow()
 
@@ -51,7 +51,8 @@ class SettingsRepository(private val context: Context) {
             hwDecodingEnabled = prefs.getBoolean(KEY_HW_DECODING, true),
             swFallbackEnabled = prefs.getBoolean(KEY_SW_FALLBACK, true),
             colorMode = prefs.getString(KEY_COLOR_MODE, "Vivid") ?: "Vivid",
-            audioBoostEnabled = prefs.getBoolean(KEY_AUDIO_BOOST, true),
+            audioBoostEnabled = prefs.getBoolean(KEY_AUDIO_BOOST, false),
+            showVideoThumbnails = prefs.getBoolean(KEY_SHOW_THUMBNAILS, true),
             playWhenLocked = prefs.getBoolean(KEY_PLAY_LOCKED, true),
             autoResumeEnabled = prefs.getBoolean(KEY_AUTO_RESUME, true),
             autoScanStartup = prefs.getBoolean(KEY_AUTO_SCAN, true),
@@ -263,6 +264,7 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_SW_FALLBACK = "pref_sw_fallback"
         private const val KEY_COLOR_MODE = "pref_color_mode"
         private const val KEY_AUDIO_BOOST = "pref_audio_boost"
+        private const val KEY_SHOW_THUMBNAILS = "pref_show_video_thumbnails"
         private const val KEY_PLAY_LOCKED = "pref_play_locked"
         private const val KEY_AUTO_RESUME = "pref_auto_resume"
         private const val KEY_AUTO_SCAN = "pref_auto_scan"
@@ -277,5 +279,10 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_SUB_BG_COLOR = "pref_sub_bg_color"
         private const val KEY_SUB_PROVIDERS = "pref_sub_providers"
         private const val KEY_BROWSER_SHOW_HIDDEN = "pref_browser_show_hidden"
+    }
+
+    fun setShowVideoThumbnails(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_THUMBNAILS, enabled).apply()
+        _settings.value = _settings.value.copy(showVideoThumbnails = enabled)
     }
 }

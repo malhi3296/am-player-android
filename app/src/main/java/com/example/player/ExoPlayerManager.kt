@@ -10,6 +10,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
@@ -26,6 +27,7 @@ class ExoPlayerManager(private val context: Context) {
     private var trackSelector: DefaultTrackSelector? = null
     private var loudnessEnhancer: LoudnessEnhancer? = null
 
+    var onTracksChangedListener: (() -> Unit)? = null
     var currentVolumeMultiplier: Float = 1.0f // 0.0 to 2.0 (200%)
         private set
 
@@ -76,6 +78,11 @@ class ExoPlayerManager(private val context: Context) {
             .build()
 
         exoPlayer = player
+        player.addListener(object : Player.Listener {
+            override fun onTracksChanged(tracks: Tracks) {
+                onTracksChangedListener?.invoke()
+            }
+        })
         setupAudioEnhancer(player.audioSessionId)
         return player
     }
@@ -175,31 +182,89 @@ class ExoPlayerManager(private val context: Context) {
 
     fun getAudioTracks(): List<Pair<Int, String>> {
         val player = exoPlayer ?: return emptyList()
-        val tracks = mutableListOf<Pair<Int, String>>()
-        val currentTracks = player.currentTracks
-
-        for (groupIndex in 0 until currentTracks.groups.size) {
-            val group = currentTracks.groups[groupIndex]
+        val list = mutableListOf<Pair<Int, String>>()
+        var trackCount = 0
+        for (group in player.currentTracks.groups) {
             if (group.type == C.TRACK_TYPE_AUDIO) {
-                for (trackIndex in 0 until group.length) {
-                    val format = group.getTrackFormat(trackIndex)
-                    val label = format.label ?: format.language ?: "Audio Track ${tracks.size + 1}"
-                    val codec = format.sampleMimeType?.substringAfterLast('/') ?: ""
-                    val description = if (codec.isNotEmpty()) "$label ($codec)" else label
-                    tracks.add(Pair(tracks.size, description))
+                for (i in 0 until group.length) {
+                    val format = group.getTrackFormat(i)
+                    val lang = format.language?.uppercase() ?: ""
+                    val label = format.label ?: if (lang.isNotEmpty()) "Audio ($lang)" else "Audio Track ${trackCount + 1}"
+                    val channels = if (format.channelCount > 0) " (${format.channelCount}ch)" else ""
+                    val isSelected = group.isTrackSelected(i)
+                    val prefix = if (isSelected) "✓ " else ""
+                    list.add(Pair(trackCount, "$prefix$label$channels"))
+                    trackCount++
                 }
             }
         }
-        return tracks
+        return list
     }
 
     fun selectAudioTrack(index: Int) {
         val player = exoPlayer ?: return
-        trackSelector?.let { selector ->
-            val builder = selector.parameters.buildUpon()
-            // Track selection
-            builder.setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
-            selector.parameters = builder.build()
+        var trackCount = 0
+        for (group in player.currentTracks.groups) {
+            if (group.type == C.TRACK_TYPE_AUDIO) {
+                for (i in 0 until group.length) {
+                    if (trackCount == index) {
+                        player.trackSelectionParameters = player.trackSelectionParameters
+                            .buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                            .setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup, i))
+                            .build()
+                        return
+                    }
+                    trackCount++
+                }
+            }
+        }
+    }
+
+    fun getSubtitleTracks(): List<Pair<Int, String>> {
+        val player = exoPlayer ?: return emptyList()
+        val list = mutableListOf<Pair<Int, String>>()
+        var trackCount = 0
+        for (group in player.currentTracks.groups) {
+            if (group.type == C.TRACK_TYPE_TEXT) {
+                for (i in 0 until group.length) {
+                    val format = group.getTrackFormat(i)
+                    val lang = format.language?.uppercase() ?: ""
+                    val label = format.label ?: if (lang.isNotEmpty()) "Subtitle ($lang)" else "Subtitle Track ${trackCount + 1}"
+                    val isSelected = group.isTrackSelected(i)
+                    val prefix = if (isSelected) "✓ " else ""
+                    list.add(Pair(trackCount, "$prefix$label"))
+                    trackCount++
+                }
+            }
+        }
+        return list
+    }
+
+    fun selectSubtitleTrack(index: Int) {
+        val player = exoPlayer ?: return
+        if (index < 0) {
+            player.trackSelectionParameters = player.trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .build()
+            return
+        }
+        var trackCount = 0
+        for (group in player.currentTracks.groups) {
+            if (group.type == C.TRACK_TYPE_TEXT) {
+                for (i in 0 until group.length) {
+                    if (trackCount == index) {
+                        player.trackSelectionParameters = player.trackSelectionParameters
+                            .buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                            .setOverrideForType(androidx.media3.common.TrackSelectionOverride(group.mediaTrackGroup, i))
+                            .build()
+                        return
+                    }
+                    trackCount++
+                }
+            }
         }
     }
 

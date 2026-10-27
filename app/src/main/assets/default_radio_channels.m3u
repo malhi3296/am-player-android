@@ -1,49 +1,62 @@
 #EXTM3U
 
-# ==========================================
-# CATEGORY: NEWS & TALK RADIO
-# ==========================================
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/8Q9Z9XX.png" group-title="News & Talk Radio",BBC World Service (UK)
-http://stream.tvgarden.world/radio/bbc_world_service.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/7pW4z7v.png" group-title="News & Talk Radio",NPR News & Talk (US)
-http://stream.tvgarden.world/radio/npr_live.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/3N40z7v.png" group-title="News & Talk Radio",RFI Monde (France)
-http://stream.tvgarden.world/radio/rfi_monde.mp3
-
-# ==========================================
-# CATEGORY: POP & TOP 40 RADIO
-# ==========================================
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/1O2P3qR.png" group-title="Pop Radio",Capital FM 95.8 (London)
-http://stream.tvgarden.world/radio/capital_fm.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/5V4N3bC.png" group-title="Pop Radio",NRJ Hit Music Only (France)
-http://stream.tvgarden.world/radio/nrj_france.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/9P0Q1RS.png" group-title="Pop Radio",KIIS FM 102.7 (Los Angeles)
-http://stream.tvgarden.world/radio/kiis_fm.mp3
-
-# ==========================================
-# CATEGORY: JAZZ, CLASSICAL & CHILL
-# ==========================================
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/L1M2N3O.png" group-title="Jazz & Lounge",Classic FM UK
-http://stream.tvgarden.world/radio/classic_fm.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/2pL8K1m.png" group-title="Jazz & Lounge",Smooth Jazz Florida
-http://stream.tvgarden.world/radio/smooth_jazz.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/K9p1N2v.png" group-title="Jazz & Lounge",SomaFM Groove Salad
-http://stream.tvgarden.world/radio/groove_salad.mp3
-
-# ==========================================
-# CATEGORY: ROCK & ALTERNATIVE
-# ==========================================
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/A0L9U3e.png" group-title="Rock Radio",Absolute Radio (UK)
-http://stream.tvgarden.world/radio/absolute_radio.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/7gK9M3p.png" group-title="Rock Radio",Rock Antenne (Germany)
-http://stream.tvgarden.world/radio/rock_antenne.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/3T4U5V6.png" group-title="Rock Radio",KROQ 106.7 (Los Angeles)
-http://stream.tvgarden.world/radio/kroq.mp3
-
-# ==========================================
-# CATEGORY: ELECTRONIC & DANCE
-# ==========================================
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/8Z9A0B1.png" group-title="Electronic Radio",DI.FM Trance Channel
-http://stream.tvgarden.world/radio/difm_trance.mp3
-#EXTINF:-1 radio="true" tvg-logo="https://i.imgur.com/4W5X6Y7.png" group-title="Electronic Radio",Ibiza Global Radio
-http://stream.tvgarden.world/radio/ibiza_global.mp3
+#EXTINF:-1 group-title="Pop Hits",BBC Radio 1 (UK)
+https://stream.live.vc.bbcmedia.co.uk/bbc_radio_one
+#EXTINF:-1 group-title="Pop Hits",BBC Radio 2 (UK)
+https://stream.live.vc.bbcmedia.co.uk/bbc_radio_two
+#EXTINF:-1 group-title="News",BBC World Service News
+https://stream.live.vc.bbcmedia.co.uk/bbc_world_service
+#EXTINF:-1 group-title="News",NPR 24 Hour Program Stream
+https://npr-ice.streamguys1.com/live.mp3
+#EXTINF:-1 group-title="News",Capital FM London
+https://media-ice.musicradio.com/CapitalMP3
+#EXTINF:-1 group-title="Pop Hits",Heart FM UK
+https://media-ice.musicradio.com/HeartLondonMP3
+#EXTINF:-1 group-title="Rock",Radio X UK
+https://media-ice.musicradio.com/RadioXLondonMP3
+#EXTINF:-1 group-title="Classical",Classic FM UK
+https://media-ice.musicradio.com/ClassicFMMP3
+#EXTINF:-1 group-title="Jazz",Jazz FM UK
+https://icecast.bauerservices.com/jazzfm.mp3
+#EXTINF:-1 group-title="Electronic",Defected Radio Ibiza
+https://stream.defected.com/radio.mp3
+#EXTINF:-1 group-title="Electronic",Ibiza Global Radio
+https://listens.live/ibizaglobalradio.mp3
+#EXTINF:-1 group-title="Electronic",DI.FM Chillout Lounge
+https://prem2.di.fm:443/chillout_hi
+#EXTINF:-1 group-title="Pop Hits",KEXP 90.3 FM Seattle
+https://kexp-mp3-128.streamguys1.com/kexp128.mp3
+#EXTINF:-1 group-title="Classical",WQXR 105.9 FM New York
+https://stream.wqxr.org/wqxr
+#EXTINF:-1 group-title="News",LBC News London
+https://media-ice.musicradio.com/LBCUKMP3
+#EXTINF:-1 group-title="Pop Hits",Virgin Radio UK
+https://radio.virginradio.co.uk/stream
+#EXTINF:-1 group-title="Pop Hits",KISS FM UK
+https://icecast.bauerservices.com/kiss.mp3
+#EXTINF:-1 group-title="World",Radio Mirchi 98.3 FM India
+http://stream.tvgarden.world/radio/mirchi.mp3
+#EXTINF:-1 group-title="World",Red FM 93.5 India
+http://stream.tvgarden.world/radio/redfm.mp3
+#EXTINF:-1 group-title="World",Radio City India
+http://stream.tvgarden.world/radio/radiocity.mp3
+#EXTINF:-1 group-title="Rock",Absolute Radio UK
+https://icecast.bauerservices.com/absoluteradio.mp3
+#EXTINF:-1 group-title="Rock",Planet Rock UK
+https://icecast.bauerservices.com/planetrock.mp3
+#EXTINF:-1 group-title="Electronic",SomaFM Groove Salad
+https://ice6.somafm.com/groovesalad-128-mp3
+#EXTINF:-1 group-title="Electronic",SomaFM Drone Zone
+https://ice6.somafm.com/dronezone-128-mp3
+#EXTINF:-1 group-title="Electronic",SomaFM Indie Pop Rocks
+https://ice6.somafm.com/indiepop-128-mp3
+#EXTINF:-1 group-title="Jazz",WBGO 88.3 FM New York Jazz
+https://wbgo.streamguys1.com/wbgo128
+#EXTINF:-1 group-title="World",Radio France Internationale
+https://icepe8.infomaniak.ch/rfianglais-128.mp3
+#EXTINF:-1 group-title="Pop Hits",Antenne Bayern Top 40
+https://stream.antenne.de/antenne/stream/mp3
+#EXTINF:-1 group-title="Pop Hits",NRJ Hit Music Only France
+https://scdn.nrjaudio.fm/adwz1/fr/30001/mp3_128.mp3
+#EXTINF:-1 group-title="Electronic",Sunshine Live Germany
+https://stream.sunshine-live.de/live/mp3-192

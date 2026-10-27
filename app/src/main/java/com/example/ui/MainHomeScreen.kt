@@ -52,11 +52,12 @@ fun MainHomeScreen(
     libraryViewModel: MediaLibraryViewModel,
     container: AppContainer,
     isDarkMode: Boolean,
+    currentTab: BottomNavTab = BottomNavTab.HOME,
+    onTabChange: (BottomNavTab) -> Unit = {},
     onToggleDarkMode: (Boolean) -> Unit,
     onPlayMedia: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var currentTab by remember { mutableStateOf(BottomNavTab.HOME) }
     val musicTracks by container.musicRepository.tracks.collectAsState()
     val iptvFolders by container.iptvRepository.folders.collectAsState()
 
@@ -71,7 +72,7 @@ fun MainHomeScreen(
                     val isSelected = currentTab == tab
                     NavigationBarItem(
                         selected = isSelected,
-                        onClick = { currentTab = tab },
+                        onClick = { onTabChange(tab) },
                         icon = {
                             Icon(
                                 imageVector = tab.icon,
@@ -87,8 +88,8 @@ fun MainHomeScreen(
                         },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = Color.White,
-                            selectedTextColor = AmAccentBlue,
-                            indicatorColor = AmAccentBlue,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            indicatorColor = MaterialTheme.colorScheme.primary,
                             unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -116,7 +117,8 @@ fun MainHomeScreen(
                             isDarkMode = isDarkMode,
                             logoDarkModeOpacity = settings.logoDarkModeOpacity,
                             onToggleDarkMode = onToggleDarkMode,
-                            onPlayMedia = onPlayMedia
+                            onPlayMedia = onPlayMedia,
+                            showVideoThumbnails = settings.showVideoThumbnails
                         )
                     }
                     BottomNavTab.MUSIC -> {
@@ -149,7 +151,7 @@ fun MainHomeScreen(
                                 // Cache clean
                             },
                             onNavigateBack = {
-                                currentTab = BottomNavTab.HOME
+                                onTabChange(BottomNavTab.HOME)
                             }
                         )
                     }
@@ -157,7 +159,7 @@ fun MainHomeScreen(
             }
         }
         androidx.activity.compose.BackHandler(enabled = currentTab != BottomNavTab.HOME) {
-            currentTab = BottomNavTab.HOME
+            onTabChange(BottomNavTab.HOME)
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.ui.player
 
+import com.example.ui.player.components.*
+
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.content.pm.ActivityInfo
@@ -80,6 +82,9 @@ fun PlayerScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     var showSubtitleSheet by remember { mutableStateOf(false) }
+    var showSubtitleTrackDialog by remember { mutableStateOf(false) }
+    var showSubtitleSettingsDialog by remember { mutableStateOf(false) }
+    var showIptvQuickDialog by remember { mutableStateOf(false) }
     var showAspectRatioDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
     var showAudioDialog by remember { mutableStateOf(false) }
@@ -265,13 +270,26 @@ fun PlayerScreen(
                 onNavigateBack()
             },
             onPlayPauseClick = { viewModel.togglePlayPause() },
-            onRewindClick = { viewModel.seekBy(-10000L) },
-            onForwardClick = { viewModel.seekBy(10000L) },
+            onRewindClick = {
+                if (uiState.isIptvStream) {
+                    viewModel.playPreviousChannel()
+                } else {
+                    viewModel.seekBy(-10000L)
+                }
+            },
+            onForwardClick = {
+                if (uiState.isIptvStream) {
+                    viewModel.playNextChannel()
+                } else {
+                    viewModel.seekBy(10000L)
+                }
+            },
+            onIptvChannelsClick = { showIptvQuickDialog = true },
             onSeek = { targetMs -> viewModel.seekTo(targetMs) },
             onLockToggle = { viewModel.toggleLock() },
             onAspectRatioClick = { showAspectRatioDialog = true },
             onSpeedClick = { showSpeedDialog = true },
-            onSubtitleClick = { showSubtitleSheet = true },
+            onSubtitleClick = { showSubtitleTrackDialog = true },
             onAudioTrackClick = { showAudioDialog = true },
             onPipClick = {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -363,11 +381,45 @@ fun PlayerScreen(
         }
 
         if (showAudioDialog) {
-            AudioTrackDialog(
-                tracks = viewModel.playerManager.getAudioTracks(),
-                selectedIndex = 0,
-                onSelectTrack = { viewModel.playerManager.selectAudioTrack(it) },
+            com.example.ui.player.components.AudioTrackDialog(
+                tracks = uiState.audioTracks.ifEmpty { viewModel.playerManager.getAudioTracks() },
+                selectedIndex = uiState.selectedAudioTrackIndex,
+                onSelectTrack = { viewModel.selectAudioTrack(it) },
                 onDismiss = { showAudioDialog = false }
+            )
+        }
+
+        if (showSubtitleTrackDialog) {
+            com.example.ui.player.components.SubtitleTrackDialog(
+                tracks = uiState.subtitleTracks.ifEmpty { viewModel.playerManager.getSubtitleTracks() },
+                selectedIndex = uiState.selectedSubtitleTrackIndex,
+                onSelectTrack = { viewModel.selectSubtitleTrack(it) },
+                onSearchOnlineClick = { showSubtitleSheet = true },
+                onSettingsClick = { showSubtitleSettingsDialog = true },
+                onDismiss = { showSubtitleTrackDialog = false }
+            )
+        }
+
+        if (showSubtitleSettingsDialog) {
+            com.example.ui.player.components.SubtitleSettingsDialog(
+                currentSizeSp = uiState.subtitleFontSizeSp,
+                currentColorHex = uiState.subtitleColorHex,
+                currentBottom = uiState.subtitlePositionBottom,
+                onSaveSettings = { sz: Int, col: Long, btm: Boolean -> viewModel.setSubtitleSettings(sz, col, btm) },
+                onSyncAdjust = { offset: Long -> viewModel.setSubtitleDelay(uiState.subtitleDelayMs + offset) },
+                onDismiss = { showSubtitleSettingsDialog = false }
+            )
+        }
+
+        if (showIptvQuickDialog || uiState.showIptvQuickDrawer) {
+            com.example.ui.player.components.IptvQuickChannelDialog(
+                channels = uiState.currentIptvChannels,
+                currentIndex = uiState.currentIptvChannelIndex,
+                onSelectChannel = { chan: com.example.data.model.IptvChannel -> viewModel.selectIptvChannel(chan) },
+                onDismiss = {
+                    showIptvQuickDialog = false
+                    if (uiState.showIptvQuickDrawer) viewModel.toggleIptvQuickDrawer()
+                }
             )
         }
 

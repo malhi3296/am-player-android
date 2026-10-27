@@ -63,9 +63,10 @@ import com.example.data.model.IptvChannel
 import com.example.data.model.IptvPlaylistFolder
 import com.example.data.repository.IptvRepository
 import com.example.data.repository.SuggestedPlaylist
-import com.example.ui.theme.AmAccentBlue
 import com.example.ui.theme.SaCardBg
 import com.example.ui.theme.SaCardBgElevated
+
+
 
 @Composable
 fun IptvScreen(
@@ -110,7 +111,7 @@ fun IptvScreen(
 
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = AmAccentBlue,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier
                         .clickable { showAddPlaylistDialog = true }
                         .testTag("add_m3u_playlist_button")
@@ -181,7 +182,7 @@ fun IptvScreen(
                     Icon(
                         imageVector = if (isRadio) Icons.Default.Radio else Icons.Default.LiveTv,
                         contentDescription = null,
-                        tint = AmAccentBlue,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
@@ -199,7 +200,7 @@ fun IptvScreen(
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = "Add Channel",
-                        tint = AmAccentBlue
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 }
             }
@@ -215,7 +216,7 @@ fun IptvScreen(
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = "Search",
-                        tint = AmAccentBlue
+                        tint = MaterialTheme.colorScheme.primary
                     )
                 },
                 trailingIcon = {
@@ -228,7 +229,7 @@ fun IptvScreen(
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AmAccentBlue,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outline
                 ),
                 modifier = Modifier
@@ -299,7 +300,7 @@ fun IptvScreen(
                         placeholder = { Text("Playlist Name", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -312,7 +313,7 @@ fun IptvScreen(
                         placeholder = { Text("https://example.com/playlist.m3u", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -325,7 +326,7 @@ fun IptvScreen(
                         text = "Browse Online Playlists (Tap to auto-fill):",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = AmAccentBlue
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
@@ -336,7 +337,7 @@ fun IptvScreen(
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray) },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color(0xFF2E2E36)
                         ),
                         shape = RoundedCornerShape(10.dp),
@@ -372,7 +373,7 @@ fun IptvScreen(
                                     Icon(
                                         imageVector = if (item.isRadio) Icons.Default.Radio else Icons.Default.LiveTv,
                                         contentDescription = null,
-                                        tint = AmAccentBlue,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
@@ -399,7 +400,7 @@ fun IptvScreen(
                         selectedFolderId = created.id
                         showAddPlaylistDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Add Playlist", color = Color.White, fontWeight = FontWeight.Bold)
@@ -437,7 +438,7 @@ fun IptvScreen(
                         placeholder = { Text("Channel Name", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -450,7 +451,7 @@ fun IptvScreen(
                         placeholder = { Text("https://example.com/live.m3u8", fontSize = 13.sp) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = AmAccentBlue,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = Color(0xFF3F3F46)
                         ),
                         shape = RoundedCornerShape(12.dp),
@@ -470,7 +471,7 @@ fun IptvScreen(
                         }
                         showAddChannelDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = AmAccentBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(10.dp)
                 ) {
                     Text("Add Stream", color = Color.White, fontWeight = FontWeight.Bold)
@@ -515,7 +516,7 @@ private fun IptvFolderGridItem(
             Icon(
                 imageVector = if (isRadio) Icons.Default.Radio else Icons.Default.Folder,
                 contentDescription = folder.name,
-                tint = AmAccentBlue,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(46.dp)
             )
         }
@@ -569,13 +570,13 @@ private fun IptvChannelCard(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(AmAccentBlue.copy(alpha = 0.15f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (isRadio) Icons.Default.Radio else Icons.Default.LiveTv,
                     contentDescription = null,
-                    tint = AmAccentBlue,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(24.dp)
                 )
             }
@@ -631,14 +632,14 @@ private fun IptvChannelCard(
 
             Surface(
                 shape = CircleShape,
-                color = AmAccentBlue.copy(alpha = 0.2f),
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
                 modifier = Modifier.size(36.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Play Live Stream",
-                        tint = AmAccentBlue,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                     )
                 }
