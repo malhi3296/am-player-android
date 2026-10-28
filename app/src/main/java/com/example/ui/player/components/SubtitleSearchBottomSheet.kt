@@ -1,5 +1,10 @@
 package com.example.ui.player.components
 
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -107,6 +112,8 @@ fun SubtitleSearchBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .imePadding()
+                .navigationBarsPadding()
                 .padding(horizontal = 20.dp, vertical = 8.dp)
                 .testTag("subtitle_search_sheet")
         ) {
@@ -241,6 +248,8 @@ fun SubtitleSearchBottomSheet(
                     onValueChange = { searchQuery = it },
                     placeholder = { Text("Video or Movie Title", color = TextMuted, fontSize = 13.sp) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearch(searchQuery, selectedLang) }),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = CyanNeon,
                         unfocusedBorderColor = DarkBorder,

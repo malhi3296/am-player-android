@@ -1,5 +1,20 @@
 package com.example.ui.iptv
 
+import android.widget.Toast
+import android.content.ClipboardManager
+import android.content.ClipData
+import androidx.compose.material.icons.filled.SportsTennis
+import androidx.compose.material.icons.filled.SportsBasketball
+import androidx.compose.material.icons.filled.SportsMma
+import androidx.compose.material.icons.filled.SportsMotorsports
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.SportsCricket
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -45,6 +60,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -65,8 +81,8 @@ import com.example.data.repository.IptvRepository
 import com.example.data.repository.SuggestedPlaylist
 import com.example.ui.theme.SaCardBg
 import com.example.ui.theme.SaCardBgElevated
-
-
+import android.content.Context
+import androidx.compose.material.icons.filled.Delete
 
 @Composable
 fun IptvScreen(
@@ -81,6 +97,16 @@ fun IptvScreen(
     var searchQuery by remember { mutableStateOf("") }
 
     val selectedFolder = folders.firstOrNull { it.id == selectedFolderId }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var contextMenuFolder by remember { mutableStateOf<IptvPlaylistFolder?>(null) }
+    var contextMenuChannel by remember { mutableStateOf<IptvChannel?>(null) }
+    var renameTargetFolder by remember { mutableStateOf<IptvPlaylistFolder?>(null) }
+    var renameTargetChannel by remember { mutableStateOf<IptvChannel?>(null) }
+    var renameInput by remember { mutableStateOf("") }
+    var deleteFolderConfirm by remember { mutableStateOf<IptvPlaylistFolder?>(null) }
+    var deleteChannelConfirm by remember { mutableStateOf<IptvChannel?>(null) }
+    val favoriteIds by repository.favoriteIds.collectAsState()
 
     // Handle back button when inside a playlist folder
     BackHandler(enabled = selectedFolderId != null) {
@@ -484,25 +510,244 @@ fun IptvScreen(
             }
         )
     }
+
+
+    // Folder Context Menu Dialog
+    contextMenuFolder?.let { folder ->
+        val isFavFolder = folder.id == "folder_fav"
+        AlertDialog(
+            onDismissRequest = { contextMenuFolder = null },
+            title = { Text(folder.name, fontWeight = FontWeight.Bold, color = Color.White) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (!isFavFolder) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                renameTargetFolder = folder
+                                renameInput = folder.name
+                                contextMenuFolder = null
+                            }.padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.DriveFileRenameOutline, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Rename Playlist Folder", color = Color.White, fontSize = 14.sp)
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                deleteFolderConfirm = folder
+                                contextMenuFolder = null
+                            }.padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444))
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text("Delete Playlist Folder", color = Color(0xFFEF4444), fontSize = 14.sp)
+                        }
+                    }
+                    Text("${folder.channels.size} channels in playlist", color = Color.Gray, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { contextMenuFolder = null }) { Text("Close", color = Color.White) }
+            }
+        )
+    }
+
+    // Channel Context Menu Dialog
+    contextMenuChannel?.let { chan ->
+        val isFav = favoriteIds.contains(chan.id) || favoriteIds.contains(chan.streamUrl)
+        AlertDialog(
+            onDismissRequest = { contextMenuChannel = null },
+            title = { Text(chan.name, fontWeight = FontWeight.Bold, color = Color.White) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            repository.toggleFavorite(chan.id)
+                            contextMenuChannel = null
+                            val msg = if (isFav) "Removed from Favourites" else "Added to Favourites"
+                            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                        }.padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            if (isFav) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = null,
+                            tint = Color(0xFFFFD700)
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(if (isFav) "Remove from Favourites" else "Add to Favourites", color = Color.White, fontSize = 14.sp)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            val clip = ClipData.newPlainText("Stream URL", chan.streamUrl)
+                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                            cm?.setPrimaryClip(clip)
+                            Toast.makeText(context, "Stream URL copied", Toast.LENGTH_SHORT).show()
+                            contextMenuChannel = null
+                        }.padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Copy Stream URL", color = Color.White, fontSize = 14.sp)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            renameTargetChannel = chan
+                            renameInput = chan.name
+                            contextMenuChannel = null
+                        }.padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.DriveFileRenameOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Rename Channel", color = Color.White, fontSize = 14.sp)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            deleteChannelConfirm = chan
+                            contextMenuChannel = null
+                        }.padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Delete Channel", color = Color(0xFFEF4444), fontSize = 14.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { contextMenuChannel = null }) { Text("Close", color = Color.White) }
+            }
+        )
+    }
+
+    // Rename Folder Dialog
+    renameTargetFolder?.let { target ->
+        AlertDialog(
+            onDismissRequest = { renameTargetFolder = null },
+            title = { Text("Rename Folder", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = renameInput,
+                    onValueChange = { renameInput = it },
+                    label = { Text("Folder Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (renameInput.isNotBlank()) repository.renameFolder(target.id, renameInput)
+                    renameTargetFolder = null
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameTargetFolder = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Rename Channel Dialog
+    renameTargetChannel?.let { target ->
+        AlertDialog(
+            onDismissRequest = { renameTargetChannel = null },
+            title = { Text("Rename Channel", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = renameInput,
+                    onValueChange = { renameInput = it },
+                    label = { Text("Channel Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (renameInput.isNotBlank()) {
+                        selectedFolder?.let { f -> repository.renameChannel(f.id, target.id, renameInput) }
+                    }
+                    renameTargetChannel = null
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameTargetChannel = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Delete Folder Confirm
+    deleteFolderConfirm?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteFolderConfirm = null },
+            title = { Text("Delete Playlist?", fontWeight = FontWeight.Bold) },
+            text = { Text("Delete '${target.name}' and all its channels?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        repository.deleteFolder(target.id)
+                        deleteFolderConfirm = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteFolderConfirm = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // Delete Channel Confirm
+    deleteChannelConfirm?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteChannelConfirm = null },
+            title = { Text("Delete Channel?", fontWeight = FontWeight.Bold) },
+            text = { Text("Delete '${target.name}' from this playlist?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        selectedFolder?.let { f -> repository.deleteChannel(f.id, target.id) }
+                        deleteChannelConfirm = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteChannelConfirm = null }) { Text("Cancel") }
+            }
+        )
+    }
+
 }
 
 /**
  * 3-Column Playlist Folder Card matching Video Folders UI:
  * Uniform Accent color, transparent/clean background, channel count below (no red badge).
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun IptvFolderGridItem(
+fun IptvFolderGridItem(
     folder: IptvPlaylistFolder,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit = {}
 ) {
-    val isRadio = folder.iconName.contains("radio", ignoreCase = true) ||
-            folder.name.contains("radio", ignoreCase = true)
+    val isFav = folder.id == "folder_fav"
+    val isRadio = folder.iconName.contains("radio", ignoreCase = true) || folder.name.contains("radio", ignoreCase = true)
+    val isYt = folder.id == "folder_youtube_live"
+
+
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         // Rounded dark square box containing uniform folder icon
         Box(
@@ -514,9 +759,18 @@ private fun IptvFolderGridItem(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = if (isRadio) Icons.Default.Radio else Icons.Default.Folder,
+                imageVector = when {
+                    isFav -> Icons.Default.Star
+                    isYt -> Icons.Default.LiveTv
+                    isRadio -> Icons.Default.Radio
+                    else -> Icons.Default.Folder
+                },
                 contentDescription = folder.name,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = when {
+                    isFav -> Color(0xFFFFD700)
+                    isYt -> Color(0xFFEF4444)
+                    else -> MaterialTheme.colorScheme.primary
+                },
                 modifier = Modifier.size(46.dp)
             )
         }
@@ -547,11 +801,15 @@ private fun IptvFolderGridItem(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun IptvChannelCard(
     channel: IptvChannel,
     isRadio: Boolean,
-    onPlay: () -> Unit
+    isFav: Boolean = false,
+    onPlay: () -> Unit,
+    onToggleFav: () -> Unit = {},
+    onLongClick: () -> Unit = {}
 ) {
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -559,7 +817,7 @@ private fun IptvChannelCard(
         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF27272A)),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onPlay() }
+            .combinedClickable(onClick = onPlay, onLongClick = onLongClick)
             .testTag("channel_card_${channel.id}")
     ) {
         Row(
@@ -630,6 +888,18 @@ private fun IptvChannelCard(
 
             Spacer(modifier = Modifier.width(8.dp))
 
+            IconButton(
+                onClick = onToggleFav,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = if (isFav) Icons.Default.Star else Icons.Default.StarBorder,
+                    contentDescription = "Favorite",
+                    tint = if (isFav) Color(0xFFFFD700) else Color.White.copy(alpha = 0.5f),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),

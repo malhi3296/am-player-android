@@ -68,7 +68,20 @@ data class PlayerUiState(
     val triggerSubtitleSearch: Boolean = false,
     val videoColorMode: com.example.player.VideoColorMode = com.example.player.VideoColorMode.NORMAL,
     val gestureControlsEnabled: Boolean = true,
-    val seekDurationSeconds: Int = 10
+    val seekDurationSeconds: Int = 10,
+    val audioTracks: List<Pair<Int, String>> = emptyList(),
+    val selectedAudioTrackIndex: Int = 0,
+    val subtitleTracks: List<Pair<Int, String>> = emptyList(),
+    val selectedSubtitleTrackIndex: Int = -1,
+    val subtitleSearchPerformed: Boolean = false,
+    val subtitleSettingsOpen: Boolean = false,
+    val subtitleFontSizeSp: Int = 18,
+    val subtitleColorHex: Long = 0xFFFFFFFF,
+    val subtitlePositionBottom: Boolean = true,
+    val isIptvStream: Boolean = false,
+    val currentIptvChannels: List<com.example.data.model.IptvChannel> = emptyList(),
+    val currentIptvChannelIndex: Int = -1,
+    val showIptvQuickDrawer: Boolean = false
 )
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
@@ -138,6 +151,72 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    
+    fun refreshTracks() {
+        val audio = playerManager.getAudioTracks()
+        val subs = playerManager.getSubtitleTracks()
+        _uiState.update {
+            it.copy(
+                audioTracks = audio,
+                subtitleTracks = subs
+            )
+        }
+    }
+
+    fun selectAudioTrack(index: Int) {
+        playerManager.selectAudioTrack(index)
+        _uiState.update { it.copy(selectedAudioTrackIndex = index) }
+        refreshTracks()
+    }
+
+    fun selectSubtitleTrack(index: Int) {
+        playerManager.selectSubtitleTrack(index)
+        _uiState.update { it.copy(selectedSubtitleTrackIndex = index) }
+        refreshTracks()
+    }
+
+    fun setSubtitleSettings(sizeSp: Int, colorHex: Long, positionBottom: Boolean) {
+        _uiState.update {
+            it.copy(
+                subtitleFontSizeSp = sizeSp,
+                subtitleColorHex = colorHex,
+                subtitlePositionBottom = positionBottom
+            )
+        }
+    }
+
+    fun playNextChannel() {
+        val list = _uiState.value.currentIptvChannels
+        if (list.isEmpty()) return
+        val curr = _uiState.value.currentIptvChannelIndex
+        val nextIdx = (curr + 1) % list.size
+        val nextChan = list[nextIdx]
+        _uiState.update { it.copy(currentIptvChannelIndex = nextIdx) }
+        loadMedia(nextChan.streamUrl)
+    }
+
+    fun playPreviousChannel() {
+        val list = _uiState.value.currentIptvChannels
+        if (list.isEmpty()) return
+        val curr = _uiState.value.currentIptvChannelIndex
+        val prevIdx = if (curr - 1 < 0) list.size - 1 else curr - 1
+        val prevChan = list[prevIdx]
+        _uiState.update { it.copy(currentIptvChannelIndex = prevIdx) }
+        loadMedia(prevChan.streamUrl)
+    }
+
+    fun selectIptvChannel(channel: com.example.data.model.IptvChannel) {
+        val idx = _uiState.value.currentIptvChannels.indexOf(channel)
+        if (idx >= 0) {
+            _uiState.update { it.copy(currentIptvChannelIndex = idx, showIptvQuickDrawer = false) }
+        }
+        loadMedia(channel.streamUrl)
+    }
+
+    fun toggleIptvQuickDrawer() {
+        _uiState.update { it.copy(showIptvQuickDrawer = !it.showIptvQuickDrawer) }
+    }
+
     fun setVideoColorMode(mode: com.example.player.VideoColorMode) {
         _uiState.update { it.copy(videoColorMode = mode, toastMessage = "Color Mode: ${mode.displayName}") }
     }
@@ -182,6 +261,24 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
             val isStream = item.uri.startsWith("http://", ignoreCase = true) || item.uri.startsWith("https://", ignoreCase = true)
             val isLive = isStream && (item.uri.contains(".m3u8", ignoreCase = true) || matchingChannel != null || item.resolution == "Live Stream")
+
+            if (isLive) {
+                val allFolders = container.iptvRepository.folders.value
+                val matchingFolder = allFolders.firstOrNull { folder ->
+                    folder.channels.any { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) }
+                }
+                val channelList = matchingFolder?.channels ?: container.iptvRepository.channels.value
+                val cIndex = channelList.indexOfFirst { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) }.coerceAtLeast(0)
+                _uiState.update {
+                    it.copy(
+                        isIptvStream = true,
+                        currentIptvChannels = channelList,
+                        currentIptvChannelIndex = cIndex
+                    )
+                }
+            } else {
+                _uiState.update { it.copy(isIptvStream = false) }
+            }
 
             if (!isLive) {
                 // Compute or retrieve video hash for automatic subtitle discovery

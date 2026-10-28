@@ -1,5 +1,12 @@
 package com.example.ui.library
 
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.DriveFileRenameOutline
+import android.content.Intent
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import android.Manifest
 import android.content.res.Configuration
 import android.os.Build
@@ -107,6 +114,13 @@ fun MediaLibraryScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+
+    var contextMenuVideo by remember { mutableStateOf<MediaItemEntity?>(null) }
+    var contextMenuFolder by remember { mutableStateOf<String?>(null) }
+    var renameVideoTarget by remember { mutableStateOf<MediaItemEntity?>(null) }
+    var renameVideoInput by remember { mutableStateOf("") }
+    var deleteVideoConfirm by remember { mutableStateOf<MediaItemEntity?>(null) }
+
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -493,8 +507,7 @@ fun MediaLibraryScreen(
                                     }
                                 },
                                 onLongClick = {
-                                    viewModel.toggleSelectionMode(true)
-                                    viewModel.toggleVideoSelection(item.id)
+                                    contextMenuVideo = item
                                 }
                             )
                         }
@@ -524,8 +537,7 @@ fun MediaLibraryScreen(
                                     }
                                 },
                                 onLongClick = {
-                                    viewModel.toggleSelectionMode(true)
-                                    viewModel.toggleVideoSelection(item.id)
+                                    contextMenuVideo = item
                                 }
                             )
                         }
@@ -661,18 +673,192 @@ fun MediaLibraryScreen(
             )
         }
     }
+
+    // Video Item Long-Press Context Menu
+    contextMenuVideo?.let { item ->
+        AlertDialog(
+            onDismissRequest = { contextMenuVideo = null },
+            title = {
+                Text(
+                    text = item.title,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // 1. Play
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val u = item.uri
+                                contextMenuVideo = null
+                                viewModel.recordVideoClick(item.id)
+                                onPlayMedia(u)
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Play Video", fontSize = 14.sp)
+                    }
+
+                    // 2. Rename
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                renameVideoTarget = item
+                                renameVideoInput = item.title
+                                contextMenuVideo = null
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.DriveFileRenameOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Rename Video", fontSize = 14.sp)
+                    }
+
+                    // 3. Hide Video (From entire phone)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                contextMenuVideo = null
+                                viewModel.hideVideo(item) { success ->
+                                    val msg = if (success) "Video hidden from phone & secured in Vault" else "Video hidden"
+                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color(0xFFFF9800))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Hide Video (From Phone)", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFFF9800))
+                            Text("Hides from all gallery apps; unlock in Vault", fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+
+                    // 4. Share
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                contextMenuVideo = null
+                                try {
+                                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                        type = "video/*"
+                                        putExtra(Intent.EXTRA_STREAM, Uri.parse(item.uri))
+                                    }
+                                    context.startActivity(Intent.createChooser(shareIntent, "Share Video"))
+                                } catch (_: Exception) {}
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Share, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Share Video", fontSize = 14.sp)
+                    }
+
+                    // 5. Delete
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                deleteVideoConfirm = item
+                                contextMenuVideo = null
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF4444))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Delete Video", fontSize = 14.sp, color = Color(0xFFEF4444))
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { contextMenuVideo = null }) {
+                    Text("Close")
+                }
+            }
+        )
+    }
+
+    // Rename Video Dialog
+    renameVideoTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { renameVideoTarget = null },
+            title = { Text("Rename Video", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = renameVideoInput,
+                    onValueChange = { renameVideoInput = it },
+                    label = { Text("New Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (renameVideoInput.isNotBlank()) {
+                        viewModel.renameVideo(target, renameVideoInput)
+                    }
+                    renameVideoTarget = null
+                }) {
+                    Text("Rename")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameVideoTarget = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Delete Single Video Confirmation
+    deleteVideoConfirm?.let { target ->
+        AlertDialog(
+            onDismissRequest = { deleteVideoConfirm = null },
+            title = { Text("Delete Video?", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete '${target.title}' from this device?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteVideo(target)
+                        deleteVideoConfirm = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444))
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteVideoConfirm = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
 }
 
-/**
- * Minimalist Folder Grid Item
- * - Background: Transparent (or White in light mode)
- * - Icon: Accent color, size 38dp portrait, 26dp landscape
- * - Red dot on top-right for recent video (no border or highlight)
- * - Video count under folder name (no red badge)
- */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
+
+
 private fun SaFolderGridItem(
     folder: FolderUiModel,
+    onLongClick: () -> Unit = {},
     isLandscape: Boolean = false,
     isDarkMode: Boolean = true,
     onClick: () -> Unit
@@ -681,7 +867,7 @@ private fun SaFolderGridItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         val iconSize = if (isLandscape) 26.dp else 38.dp
         val cornerRadius = if (isLandscape) 12.dp else 16.dp
@@ -744,9 +930,11 @@ private fun SaFolderGridItem(
 /**
  * Vertical Folder List Item
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SaFolderListItem(
     folder: FolderUiModel,
+    onLongClick: () -> Unit = {},
     isDarkMode: Boolean = true,
     onClick: () -> Unit
 ) {
@@ -756,7 +944,7 @@ private fun SaFolderListItem(
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -812,6 +1000,13 @@ private fun VideoThumbnailImage(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+
+    var contextMenuVideo by remember { mutableStateOf<MediaItemEntity?>(null) }
+    var contextMenuFolder by remember { mutableStateOf<String?>(null) }
+    var renameVideoTarget by remember { mutableStateOf<MediaItemEntity?>(null) }
+    var renameVideoInput by remember { mutableStateOf("") }
+    var deleteVideoConfirm by remember { mutableStateOf<MediaItemEntity?>(null) }
+
     var bitmap by remember(uriString, showThumbnails) { mutableStateOf<android.graphics.Bitmap?>(null) }
 
     LaunchedEffect(uriString, showThumbnails) {
@@ -854,6 +1049,7 @@ private fun VideoThumbnailImage(
 /**
  * Video Item in Grid View: Clean thumbnail + Video Title ONLY (Requirement 36)
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SaVideoGridItem(
     item: MediaItemEntity,
@@ -873,7 +1069,7 @@ private fun SaVideoGridItem(
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             Box(
@@ -921,6 +1117,7 @@ private fun SaVideoGridItem(
 /**
  * Video Item in List View: Clean row with Thumbnail + Video Title ONLY (Requirement 36)
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SaVideoListItem(
     item: MediaItemEntity,
@@ -939,7 +1136,7 @@ private fun SaVideoListItem(
         ),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),

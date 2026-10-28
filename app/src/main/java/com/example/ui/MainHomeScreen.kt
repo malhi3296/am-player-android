@@ -127,6 +127,7 @@ fun MainHomeScreen(
                             playerManager = container.musicPlayerManager,
                             musicRepository = container.musicRepository,
                             settingsRepository = container.settingsRepository,
+                            radioStations = container.iptvRepository.getRadioStations(),
                             onRescan = {
                                 // Trigger rescan of audio
                             }

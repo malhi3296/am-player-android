@@ -60,6 +60,54 @@ class MediaRepository(
         mediaDao.insertOrUpdate(item)
     }
 
+    
+    suspend fun renameMediaItem(id: String, newTitle: String) = withContext(Dispatchers.IO) {
+        val existing = mediaDao.getMediaById(id) ?: return@withContext
+        mediaDao.insertOrUpdate(existing.copy(title = newTitle.trim()))
+    }
+
+    suspend fun hideMediaItem(item: MediaItemEntity): Boolean = withContext(Dispatchers.IO) {
+        try {
+            // 1. Move/rename to hidden directory inside app's private files with a .nomedia file
+            val hiddenDir = File(context.filesDir, "vault_hidden")
+            hiddenDir.mkdirs()
+            val nomedia = File(hiddenDir, ".nomedia")
+            if (!nomedia.exists()) nomedia.createNewFile()
+
+            val srcUri = Uri.parse(item.uri)
+            val fileName = srcUri.lastPathSegment ?: "hidden_${System.currentTimeMillis()}.mp4"
+            val targetFile = File(hiddenDir, ".hidden_$fileName")
+
+            // Copy content into private hidden vault
+            context.contentResolver.openInputStream(srcUri)?.use { input ->
+                targetFile.outputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            // 2. Delete original from MediaStore so NO other app on the phone can see it!
+            try {
+                context.contentResolver.delete(srcUri, null, null)
+            } catch (_: Exception) {}
+
+            // 3. Remove from public media library
+            mediaDao.deleteByIds(listOf(item.id))
+            true
+        } catch (e: Exception) {
+            // Fallback: remove from public list
+            mediaDao.deleteByIds(listOf(item.id))
+            false
+        }
+    }
+
+    suspend fun deleteSingleMedia(item: MediaItemEntity): Boolean = withContext(Dispatchers.IO) {
+        try {
+            context.contentResolver.delete(Uri.parse(item.uri), null, null)
+        } catch (_: Exception) {}
+        mediaDao.deleteByIds(listOf(item.id))
+        true
+    }
+
     suspend fun deleteMediaItems(ids: List<String>) = withContext(Dispatchers.IO) {
         mediaDao.deleteByIds(ids)
         // Also remove if last played

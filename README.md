@@ -13,8 +13,8 @@
 </p>
 
 <p align="center">
-  <a href="apk/AMPlayer-v2.4.apk">
-    <img src="https://img.shields.io/badge/Download-AM%20Player%20APK%20v2.4%20(30%20MB)-4D6BFE?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" />
+  <a href="apk/AMPlayer-v2.4.2.apk">
+    <img src="https://img.shields.io/badge/Download-AM%20Player%20APK%20v2.4.2%20(30%20MB)-4D6BFE?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" />
   </a>
 </p>
 
@@ -24,7 +24,7 @@
 
 You can download and install the latest compiled release APK directly on any Android device (Android 7.0+ / API 24 to Android 15 / API 35+):
 
-- 🚀 **[Direct Download: AMPlayer-v2.4.apk (30 MB)](apk/AMPlayer-v2.4.apk)**
+- 🚀 **[Direct Download: AMPlayer-v2.4.2.apk (30 MB)](apk/AMPlayer-v2.4.2.apk)**
 - 📦 **Alternative Path**: `.build-outputs/app-debug.apk`
 
 ---
@@ -160,5 +160,5 @@ com.example/
 ## 👨‍💻 Developer & Credits
 
 - **Developer**: Arwinder Singh Malhi (`malhi3296@gmail.com`)
-- **Version**: 2.4.0 Pro (Build 2026)
+- **Version**: 2.4.2 Pro (Build 2026)
 - **License**: Open Source

@@ -225,6 +225,29 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
         _uiState.update { it.copy(selectedVideoIds = ids.toSet(), isSelectionMode = true) }
     }
 
+    
+    fun renameVideo(item: MediaItemEntity, newTitle: String) {
+        viewModelScope.launch {
+            mediaRepo.renameMediaItem(item.id, newTitle)
+            rescan()
+        }
+    }
+
+    fun hideVideo(item: MediaItemEntity, onResult: (Boolean) -> Unit) {
+        viewModelScope.launch {
+            val success = mediaRepo.hideMediaItem(item)
+            rescan()
+            onResult(success)
+        }
+    }
+
+    fun deleteVideo(item: MediaItemEntity) {
+        viewModelScope.launch {
+            mediaRepo.deleteSingleMedia(item)
+            rescan()
+        }
+    }
+
     fun deleteSelectedVideos() {
         val toDelete = _uiState.value.selectedVideoIds.toList()
         if (toDelete.isNotEmpty()) {

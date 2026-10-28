@@ -1,5 +1,7 @@
 package com.example.ui.music
 
+import androidx.compose.material.icons.filled.Radio
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
@@ -118,6 +120,7 @@ fun MusicScreen(
     playerManager: MusicPlayerManager,
     musicRepository: MusicRepository? = null,
     settingsRepository: com.example.data.repository.SettingsRepository? = null,
+    radioStations: List<com.example.data.model.IptvChannel> = emptyList(),
     onRescan: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -127,6 +130,8 @@ fun MusicScreen(
     val isOnlineMusicEnabled = settingsState?.onlineMusicEnabled ?: false
 
     var searchQuery by remember { mutableStateOf("") }
+    var activeMusicTab by remember { mutableStateOf("Songs") }
+    // radioStations passed as parameter
     var isFullScreenPlayer by remember { mutableStateOf(false) }
     var showEqualizerDialog by remember { mutableStateOf(false) }
     var showAddStreamDialog by remember { mutableStateOf(false) }
