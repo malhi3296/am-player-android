@@ -44,7 +44,7 @@ data class LibraryUiState(
     val isScanning: Boolean = false,
     val viewMode: ViewMode = ViewMode.GRID,
     val sortOption: SortOption = SortOption.NAME_ASC,
-    val hasPermission: Boolean = true,
+    val hasPermission: Boolean = false,
     val isSelectionMode: Boolean = false,
     val selectedVideoIds: Set<String> = emptySet()
 )
@@ -170,7 +170,27 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), emptyList())
 
     init {
+        checkPermission()
         rescan()
+    }
+
+    fun checkPermission() {
+        val app = getApplication<Application>()
+        val hasPerm = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                app,
+                android.Manifest.permission.READ_MEDIA_VIDEO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                app,
+                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        _uiState.update { it.copy(hasPermission = hasPerm) }
+        if (hasPerm) {
+            rescan()
+        }
     }
 
     fun rescan() {

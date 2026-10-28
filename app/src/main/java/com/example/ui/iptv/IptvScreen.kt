@@ -178,7 +178,8 @@ fun IptvScreen(
                 items(folders, key = { it.id }) { folder ->
                     IptvFolderGridItem(
                         folder = folder,
-                        onClick = { selectedFolderId = folder.id }
+                        onClick = { selectedFolderId = folder.id },
+                        onLongClick = { contextMenuFolder = folder }
                     )
                 }
             }
@@ -276,10 +277,14 @@ fun IptvScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 items(filteredChannels, key = { it.id }) { channel ->
+                    val isFav = favoriteIds.contains(channel.id) || favoriteIds.contains(channel.streamUrl)
                     IptvChannelCard(
                         channel = channel,
                         isRadio = isRadio,
-                        onPlay = { onPlayChannel(channel.streamUrl) }
+                        isFav = isFav,
+                        onPlay = { onPlayChannel(channel.streamUrl) },
+                        onToggleFav = { repository.toggleFavorite(channel.id) },
+                        onLongClick = { contextMenuChannel = channel }
                     )
                 }
             }
@@ -739,9 +744,6 @@ fun IptvFolderGridItem(
 ) {
     val isFav = folder.id == "folder_fav"
     val isRadio = folder.iconName.contains("radio", ignoreCase = true) || folder.name.contains("radio", ignoreCase = true)
-    val isYt = folder.id == "folder_youtube_live"
-
-
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -761,14 +763,12 @@ fun IptvFolderGridItem(
             Icon(
                 imageVector = when {
                     isFav -> Icons.Default.Star
-                    isYt -> Icons.Default.LiveTv
                     isRadio -> Icons.Default.Radio
                     else -> Icons.Default.Folder
                 },
                 contentDescription = folder.name,
                 tint = when {
                     isFav -> Color(0xFFFFD700)
-                    isYt -> Color(0xFFEF4444)
                     else -> MaterialTheme.colorScheme.primary
                 },
                 modifier = Modifier.size(46.dp)

@@ -129,11 +129,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
-            val msg = error.message ?: "Live stream buffering or unavailable"
+            val cause = error.cause
+            val msg = when {
+                cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException -> {
+                    "Stream error: HTTP ${cause.responseCode} (Channel offline or unavailable)"
+                }
+                cause is androidx.media3.datasource.FileDataSource.FileDataSourceException -> {
+                    "Unable to open video: File not found or invalid URL"
+                }
+                else -> error.message ?: "Live stream buffering or unavailable"
+            }
             _uiState.update {
                 it.copy(
                     isBuffering = false,
-                    toastMessage = "Stream Alert: ${msg.take(45)}"
+                    toastMessage = msg
                 )
             }
         }
@@ -225,14 +234,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             val matchingChannel = container.iptvRepository.folders.value
                 .flatMap { it.channels }
-                .firstOrNull { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) }
+                .firstOrNull { 
+                    it.streamUrl.equals(mediaUriOrId, ignoreCase = true) ||
+                    it.id.equals(mediaUriOrId, ignoreCase = true) ||
+                    it.name.equals(mediaUriOrId, ignoreCase = true)
+                }
                 ?: container.iptvRepository.channels.value
-                    .firstOrNull { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) }
+                    .firstOrNull { 
+                        it.streamUrl.equals(mediaUriOrId, ignoreCase = true) ||
+                        it.id.equals(mediaUriOrId, ignoreCase = true) ||
+                        it.name.equals(mediaUriOrId, ignoreCase = true)
+                    }
 
             val item = if (matchingChannel != null) {
                 MediaItemEntity(
-                    id = mediaUriOrId,
-                    uri = mediaUriOrId,
+                    id = matchingChannel.id,
+                    uri = matchingChannel.streamUrl,
                     title = matchingChannel.name,
                     folderName = "IPTV: ${matchingChannel.category}",
                     resolution = "Live Stream"

@@ -34,12 +34,12 @@ https://media-ice.musicradio.com/LBCUKMP3
 https://radio.virginradio.co.uk/stream
 #EXTINF:-1 group-title="Pop Hits",KISS FM UK
 https://icecast.bauerservices.com/kiss.mp3
-#EXTINF:-1 group-title="World",Radio Mirchi 98.3 FM India
-http://stream.tvgarden.world/radio/mirchi.mp3
-#EXTINF:-1 group-title="World",Red FM 93.5 India
-http://stream.tvgarden.world/radio/redfm.mp3
-#EXTINF:-1 group-title="World",Radio City India
-http://stream.tvgarden.world/radio/radiocity.mp3
+#EXTINF:-1 group-title="World",Radio Mirchi Hindi Hits
+https://ice5.somafm.com/suburbsofgoa-128-mp3
+#EXTINF:-1 group-title="World",BBC Asian Network News & Beats
+https://stream.live.vc.bbcmedia.co.uk/bbc_asian_network
+#EXTINF:-1 group-title="World",Radio City Desi Bollywood
+https://prclive4.listenon.in/Hindi
 #EXTINF:-1 group-title="Rock",Absolute Radio UK
 https://icecast.bauerservices.com/absoluteradio.mp3
 #EXTINF:-1 group-title="Rock",Planet Rock UK

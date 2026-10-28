@@ -170,6 +170,37 @@ fun MediaLibraryScreen(
     ) { permissionsMap ->
         val granted = permissionsMap.values.any { it }
         viewModel.setPermissionGranted(granted)
+        if (granted) {
+            viewModel.rescan()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val app = context.applicationContext
+        val hasPerm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                app,
+                Manifest.permission.READ_MEDIA_VIDEO
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        } else {
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                app,
+                Manifest.permission.READ_EXTERNAL_STORAGE
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        }
+        viewModel.setPermissionGranted(hasPerm)
+        if (!hasPerm) {
+            val perms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                arrayOf(
+                    Manifest.permission.READ_MEDIA_VIDEO,
+                    Manifest.permission.READ_MEDIA_AUDIO,
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
+            } else {
+                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+            }
+            permissionLauncher.launch(perms)
+        }
     }
 
     BackHandler(enabled = uiState.selectedFolder != null || uiState.isSelectionMode) {
@@ -442,7 +473,8 @@ fun MediaLibraryScreen(
                                 folder = folder,
                                 isLandscape = isLandscape,
                                 isDarkMode = isDarkMode,
-                                onClick = { viewModel.setSelectedFolder(folder.name) }
+                                onClick = { viewModel.setSelectedFolder(folder.name) },
+                                onLongClick = { contextMenuFolder = folder.name }
                             )
                         }
                     }
@@ -459,7 +491,8 @@ fun MediaLibraryScreen(
                             SaFolderListItem(
                                 folder = folder,
                                 isDarkMode = isDarkMode,
-                                onClick = { viewModel.setSelectedFolder(folder.name) }
+                                onClick = { viewModel.setSelectedFolder(folder.name) },
+                                onLongClick = { contextMenuFolder = folder.name }
                             )
                         }
                     }
@@ -845,6 +878,39 @@ fun MediaLibraryScreen(
             dismissButton = {
                 TextButton(onClick = { deleteVideoConfirm = null }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Folder Context Menu Dialog
+    contextMenuFolder?.let { folderName ->
+        AlertDialog(
+            onDismissRequest = { contextMenuFolder = null },
+            title = { Text(folderName, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                contextMenuFolder = null
+                                viewModel.setSelectedFolder(folderName)
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Open Folder", fontSize = 14.sp)
+                    }
+                    val folderVideos = allRawMedia.filter { it.folderName == folderName }
+                    Text("${folderVideos.size} videos in this folder", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { contextMenuFolder = null }) {
+                    Text("Close")
                 }
             }
         )

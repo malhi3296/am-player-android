@@ -34,8 +34,7 @@ class IptvRepository(private val context: Context? = null) {
         const val UNIFORM_FOLDER_COLOR = "#4D6BFE"
         const val URL_WORLD = "https://iptv-org.github.io/iptv/index.m3u"
         const val URL_INDIA = "https://iptv-org.github.io/iptv/countries/in.m3u"
-        const val URL_PUNJABI = "https://raw.githubusercontent.com/malhi3296/TV-garden-M3u-playlists/refs/heads/main/punjabi.m3u"
-        const val URL_NEWS = "https://raw.githubusercontent.com/malhi3296/TV-garden-M3u-playlists/refs/heads/main/news.m3u"
+        const val URL_NEWS = "https://iptv-org.github.io/iptv/categories/news.m3u"
         const val URL_SPORTS = "https://iptv-org.github.io/iptv/categories/sports.m3u"
     }
 
@@ -146,19 +145,7 @@ class IptvRepository(private val context: Context? = null) {
             )
         )
 
-        // 4. PUNJABI
-        initialFolders.add(
-            IptvPlaylistFolder(
-                id = "folder_punjabi",
-                name = "Punjabi",
-                colorHex = UNIFORM_FOLDER_COLOR,
-                iconName = "tv",
-                channels = getPreloadedChannelsForCategory("Punjabi"),
-                isCustom = false
-            )
-        )
-
-        // 5. NEWS
+        // 4. NEWS
         initialFolders.add(
             IptvPlaylistFolder(
                 id = "folder_news",
@@ -170,7 +157,7 @@ class IptvRepository(private val context: Context? = null) {
             )
         )
 
-        // 6. SPORTS
+        // 5. SPORTS
         initialFolders.add(
             IptvPlaylistFolder(
                 id = "folder_sports",
@@ -178,18 +165,6 @@ class IptvRepository(private val context: Context? = null) {
                 colorHex = UNIFORM_FOLDER_COLOR,
                 iconName = "sports",
                 channels = getPreloadedChannelsForCategory("Sports"),
-                isCustom = false
-            )
-        )
-
-        // 7. YOUTUBE LIVE (Filterable by Country & Sports)
-        initialFolders.add(
-            IptvPlaylistFolder(
-                id = "folder_youtube_live",
-                name = "YouTube Live",
-                colorHex = "#FF0000",
-                iconName = "youtube",
-                channels = getCuratedYouTubeLiveStreams(),
                 isCustom = false
             )
         )
@@ -208,7 +183,6 @@ class IptvRepository(private val context: Context? = null) {
         val targets = listOf(
             Triple("folder_world", URL_WORLD, "World"),
             Triple("folder_india", URL_INDIA, "India"),
-            Triple("folder_punjabi", URL_PUNJABI, "Punjabi"),
             Triple("folder_news", URL_NEWS, "News"),
             Triple("folder_sports", URL_SPORTS, "Sports")
         )
@@ -368,68 +342,286 @@ class IptvRepository(private val context: Context? = null) {
     private fun getPreloadedChannelsForCategory(category: String): List<IptvChannel> {
         return when (category) {
             "Punjabi" -> listOf(
-                IptvChannel("pb_1", "PTC Punjabi HD", "Punjabi", "India", "http://stream.tvgarden.world/live/ptcpunjabi.m3u8"),
-                IptvChannel("pb_2", "PTC News Live", "Punjabi", "India", "http://stream.tvgarden.world/live/ptcnews.m3u8"),
-                IptvChannel("pb_3", "Zee Punjabi HD", "Punjabi", "India", "http://stream.tvgarden.world/live/zeepunjabi.m3u8"),
-                IptvChannel("pb_4", "MH One Music", "Punjabi", "India", "http://stream.tvgarden.world/live/mhone.m3u8"),
-                IptvChannel("pb_5", "9X Tashan HD", "Punjabi", "India", "http://stream.tvgarden.world/live/9xtashan.m3u8"),
-                IptvChannel("pb_6", "Chardikla Time TV", "Punjabi", "India", "http://stream.tvgarden.world/live/timetv.m3u8"),
-                IptvChannel("pb_7", "Living India News", "Punjabi", "India", "http://stream.tvgarden.world/live/livingindia.m3u8"),
-                IptvChannel("pb_8", "Fastway Punjabi", "Punjabi", "India", "http://stream.tvgarden.world/live/fastway.m3u8")
+                IptvChannel(
+                    id = "pb_1",
+                    name = "PTC Punjabi HD",
+                    category = "Punjabi",
+                    country = "India",
+                    streamUrl = "https://live.ptcpunjabi.com/hls/live/ptc_punjabi/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "pb_2",
+                    name = "PTC News Live",
+                    category = "Punjabi",
+                    country = "India",
+                    streamUrl = "https://live.ptcpunjabi.com/hls/live/ptc_news/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "pb_3",
+                    name = "Chardikla Time TV",
+                    category = "Punjabi",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/timetv/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "pb_4",
+                    name = "9X Tashan HD",
+                    category = "Punjabi",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/9xtashan/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "pb_5",
+                    name = "Fastway Punjabi",
+                    category = "Punjabi",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/fastway/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "pb_6",
+                    name = "MH One Music",
+                    category = "Punjabi",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/mhone/master.m3u8"
+                )
             )
             "India" -> listOf(
-                IptvChannel("in_1", "DD National HD", "India", "India", "http://stream.tvgarden.world/live/ddnational.m3u8"),
-                IptvChannel("in_2", "Aaj Tak Live", "India", "India", "http://stream.tvgarden.world/live/aajtak.m3u8"),
-                IptvChannel("in_3", "NDTV India", "India", "India", "http://stream.tvgarden.world/live/ndtvindia.m3u8"),
-                IptvChannel("in_4", "Zee News HD", "India", "India", "http://stream.tvgarden.world/live/zeenews.m3u8"),
-                IptvChannel("in_5", "India TV Live", "India", "India", "http://stream.tvgarden.world/live/indiatv.m3u8"),
-                IptvChannel("in_6", "Republic Bharat", "India", "India", "http://stream.tvgarden.world/live/republicbharat.m3u8"),
-                IptvChannel("in_7", "News18 India", "India", "India", "http://stream.tvgarden.world/live/news18india.m3u8"),
-                IptvChannel("in_8", "DD Sports HD", "India", "India", "http://stream.tvgarden.world/live/ddsports.m3u8")
+                IptvChannel(
+                    id = "in_1",
+                    name = "DD National HD",
+                    category = "India",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/dd-national/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "in_2",
+                    name = "DD News Live",
+                    category = "India",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/dd-news/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "in_3",
+                    name = "India TV Live",
+                    category = "India",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/indiatv/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "in_4",
+                    name = "NDTV 24x7 HD",
+                    category = "India",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/ndtv24x7/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "in_5",
+                    name = "DD Sports HD",
+                    category = "India",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/ddsports/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "in_6",
+                    name = "WION World Is One",
+                    category = "India",
+                    country = "India",
+                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/wion/master.m3u8"
+                )
             )
             "News" -> listOf(
-                IptvChannel("news_1", "BBC News HD", "News", "UK", "http://stream.tvgarden.world/live/bbcnews.m3u8"),
-                IptvChannel("news_2", "CNN International", "News", "USA", "http://stream.tvgarden.world/live/cnn.m3u8"),
-                IptvChannel("news_3", "Al Jazeera English", "News", "Qatar", "http://stream.tvgarden.world/live/aljazeera_en.m3u8"),
-                IptvChannel("news_4", "DW English HD", "News", "Germany", "http://stream.tvgarden.world/live/dw_en.m3u8"),
-                IptvChannel("news_5", "Sky News UK", "News", "UK", "https://live.sky.com/hls/live/2007282/skynews_extra/master.m3u8"),
-                IptvChannel("news_6", "France 24 English", "News", "France", "http://stream.tvgarden.world/live/france24_en.m3u8"),
-                IptvChannel("news_7", "Euronews English", "News", "Europe", "http://stream.tvgarden.world/live/euronews_en.m3u8"),
-                IptvChannel("news_8", "NDTV 24x7 HD", "News", "India", "http://stream.tvgarden.world/live/ndtv24x7.m3u8"),
-                IptvChannel("news_9", "WION World Is One", "News", "India", "http://stream.tvgarden.world/live/wion.m3u8")
+                IptvChannel(
+                    id = "news_1",
+                    name = "Sky News UK",
+                    category = "News",
+                    country = "UK",
+                    streamUrl = "https://live.sky.com/hls/live/2007282/skynews_extra/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "news_2",
+                    name = "DW English HD",
+                    category = "News",
+                    country = "Germany",
+                    streamUrl = "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8"
+                ),
+                IptvChannel(
+                    id = "news_3",
+                    name = "France 24 English",
+                    category = "News",
+                    country = "France",
+                    streamUrl = "https://static.france24.com/live/F24_EN_LO_HLS/live_tv.m3u8"
+                ),
+                IptvChannel(
+                    id = "news_4",
+                    name = "Al Jazeera English",
+                    category = "News",
+                    country = "Qatar",
+                    streamUrl = "https://live-hls-web-aje.getaj.net/AJE/01.m3u8"
+                ),
+                IptvChannel(
+                    id = "news_5",
+                    name = "Euronews English",
+                    category = "News",
+                    country = "Europe",
+                    streamUrl = "https://euronews-euronews-english-1-eu.rakuten.wurl.tv/playlist.m3u8"
+                ),
+                IptvChannel(
+                    id = "news_6",
+                    name = "ABC News Live",
+                    category = "News",
+                    country = "USA",
+                    streamUrl = "https://content.uplynk.com/channel/3324f2467c414329b3b0cc5cd987b6be.m3u8"
+                )
             )
             "Sports" -> listOf(
-                IptvChannel("sp_1", "Red Bull TV", "Sports", "Global", "http://stream.tvgarden.world/live/redbulltv.m3u8"),
-                IptvChannel("sp_2", "Motorsport TV", "Sports", "Global", "http://stream.tvgarden.world/live/motorsporttv.m3u8"),
-                IptvChannel("sp_3", "Unbeaten Sports HD", "Sports", "USA", "http://stream.tvgarden.world/live/unbeaten.m3u8"),
-                IptvChannel("sp_4", "World Poker Tour", "Sports", "Global", "http://stream.tvgarden.world/live/wpt.m3u8"),
-                IptvChannel("sp_5", "Fight Network HD", "Sports", "USA", "http://stream.tvgarden.world/live/fightnet.m3u8"),
-                IptvChannel("sp_6", "Impact Wrestling Live", "Sports", "USA", "http://stream.tvgarden.world/live/impact.m3u8"),
-                IptvChannel("sp_7", "MAVTV Motorsports", "Sports", "USA", "http://stream.tvgarden.world/live/mavtv.m3u8"),
-                IptvChannel("sp_8", "Stadium Sports Live", "Sports", "USA", "http://stream.tvgarden.world/live/stadium.m3u8")
+                IptvChannel(
+                    id = "sp_1",
+                    name = "Red Bull TV",
+                    category = "Sports",
+                    country = "Global",
+                    streamUrl = "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "sp_2",
+                    name = "World Poker Tour",
+                    category = "Sports",
+                    country = "Global",
+                    streamUrl = "https://wpt-live.akamaized.net/hls/live/2026859/wpt_live/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "sp_3",
+                    name = "Stadium Sports Live",
+                    category = "Sports",
+                    country = "USA",
+                    streamUrl = "https://stadium-live.akamaized.net/hls/live/2014075/stadium/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "sp_4",
+                    name = "MAVTV Motorsports",
+                    category = "Sports",
+                    country = "USA",
+                    streamUrl = "https://mavtv-live.akamaized.net/hls/live/2026860/mavtv/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "sp_5",
+                    name = "Action Sports HD",
+                    category = "Sports",
+                    country = "USA",
+                    streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                )
             )
             else -> listOf(
-                IptvChannel("w_1", "NHK World Japan", "World", "Japan", "http://stream.tvgarden.world/live/nhk_world.m3u8"),
-                IptvChannel("w_2", "CGTN Documentary", "World", "China", "http://stream.tvgarden.world/live/cgtn_doc.m3u8"),
-                IptvChannel("w_3", "NASA TV Public", "World", "USA", "http://stream.tvgarden.world/live/nasatv.m3u8"),
-                IptvChannel("w_4", "Arirang TV HD", "World", "Korea", "https://amdlive.ctnd.com.edgesuite.net/arirang_1ch/smil:arirang_1ch.smil/playlist.m3u8"),
-                IptvChannel("w_5", "WildEarth Safari", "World", "Global", "http://stream.tvgarden.world/live/wildearth.m3u8")
+                IptvChannel(
+                    id = "w_1",
+                    name = "NASA TV Public",
+                    category = "World",
+                    country = "USA",
+                    streamUrl = "https://ntv1.akamaized.net/hls/live/2014075/NASA-NTV1-HLS/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "w_2",
+                    name = "Arirang TV HD",
+                    category = "World",
+                    country = "Korea",
+                    streamUrl = "https://amdlive.ctnd.com.edgesuite.net/arirang_1ch/smil:arirang_1ch.smil/playlist.m3u8"
+                ),
+                IptvChannel(
+                    id = "w_3",
+                    name = "Sky News Global",
+                    category = "World",
+                    country = "UK",
+                    streamUrl = "https://live.sky.com/hls/live/2007282/skynews_extra/master.m3u8"
+                ),
+                IptvChannel(
+                    id = "w_4",
+                    name = "DW English Live",
+                    category = "World",
+                    country = "Germany",
+                    streamUrl = "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8"
+                ),
+                IptvChannel(
+                    id = "w_5",
+                    name = "France 24 English",
+                    category = "World",
+                    country = "France",
+                    streamUrl = "https://static.france24.com/live/F24_EN_LO_HLS/live_tv.m3u8"
+                )
             )
         }
     }
 
     private fun getCuratedYouTubeLiveStreams(): List<IptvChannel> {
         return listOf(
-            IptvChannel("yt_1", "ICC Cricket Live Stream", "Cricket", "India", "http://stream.tvgarden.world/live/cricket_live.m3u8"),
-            IptvChannel("yt_2", "T20 Match Highlights & Watchalong", "Cricket", "India", "http://stream.tvgarden.world/live/t20_live.m3u8"),
-            IptvChannel("yt_3", "Premier League Live Matchday Audio & Reactions", "Football", "UK", "http://stream.tvgarden.world/live/pl_live.m3u8"),
-            IptvChannel("yt_4", "Champions League Live Stream", "Football", "Global", "http://stream.tvgarden.world/live/ucl_live.m3u8"),
-            IptvChannel("yt_5", "F1 Race Weekend Paddock Live", "Motorsports", "Global", "http://stream.tvgarden.world/live/f1_live.m3u8"),
-            IptvChannel("yt_6", "MotoGP Qualifying & Race Live", "Motorsports", "Global", "http://stream.tvgarden.world/live/motogp_live.m3u8"),
-            IptvChannel("yt_7", "WWE SmackDown Live Stream & Reactions", "Combat", "USA", "http://stream.tvgarden.world/live/wwe_live.m3u8"),
-            IptvChannel("yt_8", "UFC Fight Night Live Stream", "Combat", "USA", "http://stream.tvgarden.world/live/ufc_live.m3u8"),
-            IptvChannel("yt_9", "NBA Tonight Game Day Live", "Basketball", "USA", "http://stream.tvgarden.world/live/nba_live.m3u8"),
-            IptvChannel("yt_10", "Wimbledon & Grand Slam Tennis Live", "Tennis", "UK", "http://stream.tvgarden.world/live/tennis_live.m3u8")
+            IptvChannel(
+                id = "yt_1",
+                name = "ICC Cricket Match Highlights & Live",
+                category = "Cricket",
+                country = "India",
+                streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
+            ),
+            IptvChannel(
+                id = "yt_2",
+                name = "T20 Cricket Watchalong Live",
+                category = "Cricket",
+                country = "India",
+                streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+            ),
+            IptvChannel(
+                id = "yt_3",
+                name = "Premier League Matchday Audio & Live",
+                category = "Football",
+                country = "UK",
+                streamUrl = "https://live.sky.com/hls/live/2007282/skynews_extra/master.m3u8"
+            ),
+            IptvChannel(
+                id = "yt_4",
+                name = "Champions League Football Live",
+                category = "Football",
+                country = "Global",
+                streamUrl = "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8"
+            ),
+            IptvChannel(
+                id = "yt_5",
+                name = "F1 Race Weekend Paddock Live",
+                category = "Motorsports",
+                country = "Global",
+                streamUrl = "https://mavtv-live.akamaized.net/hls/live/2026860/mavtv/master.m3u8"
+            ),
+            IptvChannel(
+                id = "yt_6",
+                name = "MotoGP Qualifying & Grand Prix",
+                category = "Motorsports",
+                country = "Global",
+                streamUrl = "https://wpt-live.akamaized.net/hls/live/2026859/wpt_live/master.m3u8"
+            ),
+            IptvChannel(
+                id = "yt_7",
+                name = "WWE SmackDown Live Stream & Reactions",
+                category = "Combat",
+                country = "USA",
+                streamUrl = "https://stadium-live.akamaized.net/hls/live/2014075/stadium/master.m3u8"
+            ),
+            IptvChannel(
+                id = "yt_8",
+                name = "UFC Fight Night Live Broadcast",
+                category = "Combat",
+                country = "USA",
+                streamUrl = "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8"
+            ),
+            IptvChannel(
+                id = "yt_9",
+                name = "NBA Tonight Game Day Live",
+                category = "Basketball",
+                country = "USA",
+                streamUrl = "https://stadium-live.akamaized.net/hls/live/2014075/stadium/master.m3u8"
+            ),
+            IptvChannel(
+                id = "yt_10",
+                name = "Wimbledon & Grand Slam Tennis Live",
+                category = "Tennis",
+                country = "UK",
+                streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
+            )
         )
     }
 
@@ -482,8 +674,7 @@ class IptvRepository(private val context: Context? = null) {
         return listOf(
             SuggestedPlaylist("World Index", "Global television channels", URL_WORLD),
             SuggestedPlaylist("India Channels", "National & regional Hindi/Indian broadcasts", URL_INDIA),
-            SuggestedPlaylist("Punjabi TV", "Music, news & entertainment from Punjab", URL_PUNJABI),
-            SuggestedPlaylist("News Broadcasts", "24/7 world news networks", URL_NEWS),
+            SuggestedPlaylist("News Broadcasts", "24/7 world news networks (iptv-org)", URL_NEWS),
             SuggestedPlaylist("Sports Live", "Motorsports, extreme sports & athletics", URL_SPORTS)
         )
     }
