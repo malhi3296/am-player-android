@@ -37,7 +37,7 @@ class MusicRepository(private val context: Context) {
                 MediaStore.Audio.Media.DATA
             )
 
-            val selection = "${MediaStore.Audio.Media.IS_MUSIC} != 0"
+            val selection = "(${MediaStore.Audio.Media.IS_MUSIC} != 0 OR ${MediaStore.Audio.Media.DURATION} > 3000) AND ${MediaStore.Audio.Media.SIZE} > 5000"
             val sortOrder = "${MediaStore.Audio.Media.TITLE} ASC"
             val queryUri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
 
@@ -76,6 +76,11 @@ class MusicRepository(private val context: Context) {
                 }
             }
         } catch (_: Exception) {}
+
+        // If no local songs exist on device yet, provide high quality open source tracks so music player is fully functional
+        if (list.isEmpty()) {
+            list.addAll(getOpenSourceLibraryTracks())
+        }
 
         // If online streaming is explicitly enabled by user in settings, allow streaming tracks
         if (_isOpenSourcePermitted.value) {

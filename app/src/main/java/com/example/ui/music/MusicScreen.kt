@@ -318,7 +318,7 @@ fun MusicScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        listOf("Songs", "Albums", "Artists", "Folders").forEach { mode ->
+                        listOf("Songs", "Albums", "Artists", "Folders", "Radio").forEach { mode ->
                             val isSelected = viewMode == mode
                             item {
                                 FilterChip(
@@ -511,6 +511,143 @@ fun MusicScreen(
                                         Column(modifier = Modifier.weight(1f)) {
                                             Text(folderName, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
                                             Text("${folderTracks.size} songs", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    viewMode == "Radio" -> {
+                        val filteredRadios = remember(radioStations, searchQuery) {
+                            radioStations.filter { radio ->
+                                searchQuery.isBlank() ||
+                                    radio.name.contains(searchQuery, ignoreCase = true) ||
+                                    radio.category.contains(searchQuery, ignoreCase = true) ||
+                                    radio.country.contains(searchQuery, ignoreCase = true)
+                            }
+                        }
+
+                        if (filteredRadios.isEmpty()) {
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(Icons.Default.Radio, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text("No Radio Stations Found", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f).fillMaxWidth()
+                            ) {
+                                items(filteredRadios, key = { it.id }) { station ->
+                                    val isCurrent = playerState.currentTrack?.id == station.id
+                                    val isPlaying = isCurrent && playerState.isPlaying
+
+                                    Surface(
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+                                        border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                val radioTrack = AudioTrack(
+                                                    id = station.id,
+                                                    uri = station.streamUrl,
+                                                    title = station.name,
+                                                    artist = station.category.ifBlank { "Live Radio" },
+                                                    album = "Live Radio (${station.country})",
+                                                    folderName = "Radio",
+                                                    durationMs = 0L,
+                                                    sizeBytes = 0L
+                                                )
+                                                val allRadioTracks = filteredRadios.map {
+                                                    AudioTrack(
+                                                        id = it.id,
+                                                        uri = it.streamUrl,
+                                                        title = it.name,
+                                                        artist = it.category.ifBlank { "Live Radio" },
+                                                        album = "Live Radio (${it.country})",
+                                                        folderName = "Radio",
+                                                        durationMs = 0L,
+                                                        sizeBytes = 0L
+                                                    )
+                                                }
+                                                playerManager.playTrack(radioTrack, allRadioTracks)
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(42.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isPlaying) Icons.Default.GraphicEq else Icons.Default.Radio,
+                                                    contentDescription = null,
+                                                    tint = if (isPlaying) Color.White else MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(24.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = station.name,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    fontSize = 14.sp,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = station.category.ifBlank { "Radio" },
+                                                        fontSize = 11.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                    if (station.country.isNotBlank()) {
+                                                        Text(
+                                                            text = " • ${station.country}",
+                                                            fontSize = 11.sp,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    val radioTrack = AudioTrack(
+                                                        id = station.id,
+                                                        uri = station.streamUrl,
+                                                        title = station.name,
+                                                        artist = station.category.ifBlank { "Live Radio" },
+                                                        album = "Live Radio (${station.country})",
+                                                        folderName = "Radio",
+                                                        durationMs = 0L,
+                                                        sizeBytes = 0L
+                                                    )
+                                                    if (isCurrent) {
+                                                        playerManager.togglePlayPause()
+                                                    } else {
+                                                        playerManager.playTrack(radioTrack, listOf(radioTrack))
+                                                    }
+                                                }
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                    contentDescription = "Play/Pause",
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
                                         }
                                     }
                                 }

@@ -51,8 +51,8 @@ class IptvRepository(private val context: Context? = null) {
 
     init {
         loadSavedFavorites()
-        loadCuratedPlaylists()
         loadRadioStations()
+        loadCuratedPlaylists()
     }
 
     private fun loadSavedFavorites() {
@@ -165,6 +165,18 @@ class IptvRepository(private val context: Context? = null) {
                 colorHex = UNIFORM_FOLDER_COLOR,
                 iconName = "sports",
                 channels = getPreloadedChannelsForCategory("Sports"),
+                isCustom = false
+            )
+        )
+
+        // 6. RADIO
+        initialFolders.add(
+            IptvPlaylistFolder(
+                id = "folder_radio",
+                name = "Radio",
+                colorHex = UNIFORM_FOLDER_COLOR,
+                iconName = "radio",
+                channels = radioStationsList,
                 isCustom = false
             )
         )

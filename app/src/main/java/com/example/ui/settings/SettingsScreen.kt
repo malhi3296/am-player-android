@@ -264,66 +264,6 @@ fun SettingsScreen(
                 onClick = { showAccentColorDialog = true }
             )
 
-            SettingToggleItem(
-                title = "Dynamic App Icon with Accent Color",
-                subtitle = if (settings.dynamicAppIconWithAccent)
-                    "App icon adapts to chosen accent (${settings.accentColorHex})"
-                else
-                    "Default classic blue app icon (#4D6BFE)",
-                checked = settings.dynamicAppIconWithAccent,
-                onCheckedChange = { settingsRepository.setDynamicAppIconWithAccent(it) }
-            )
-
-            // Live App Icon Preview
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (settings.dynamicAppIconWithAccent)
-                                    parseHexColor(settings.accentColorHex)
-                                else
-                                    Color(0xFF4D6BFE)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.am_player_icon),
-                            contentDescription = "App Icon Preview",
-                            modifier = Modifier.size(36.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(14.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "App Icon Preview",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (settings.dynamicAppIconWithAccent)
-                                "Dynamic Accent: ${settings.accentColorHex}"
-                            else
-                                "Classic Blue (#4D6BFE)",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
             // Logo Dark Mode Opacity (Item 19a)
             Column(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                 Row(

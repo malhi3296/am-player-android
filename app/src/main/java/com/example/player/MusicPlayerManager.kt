@@ -99,11 +99,19 @@ class MusicPlayerManager(private val context: Context) {
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
-            val dur = exoPlayer?.duration?.coerceAtLeast(0L) ?: 0L
-            _state.update { it.copy(durationMs = dur) }
+            val dur = exoPlayer?.duration
+            val safeDur = if (dur == null || dur == C.TIME_UNSET || dur <= 0L) {
+                _state.value.currentTrack?.durationMs ?: 0L
+            } else dur
+            _state.update { it.copy(durationMs = safeDur) }
             if (playbackState == Player.STATE_ENDED) {
                 handleTrackEnded()
             }
+        }
+
+        override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+            android.util.Log.e("MusicPlayerManager", "Audio playback error: ${error.message}", error)
+            _state.update { it.copy(isPlaying = false) }
         }
     }
 
@@ -112,12 +120,14 @@ class MusicPlayerManager(private val context: Context) {
 
         val httpDataSourceFactory = androidx.media3.datasource.DefaultHttpDataSource.Factory()
             .setAllowCrossProtocolRedirects(true)
-            .setConnectTimeoutMs(20000)
-            .setReadTimeoutMs(20000)
-            .setUserAgent("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+            .setKeepPostFor302Redirects(true)
+            .setConnectTimeoutMs(25000)
+            .setReadTimeoutMs(25000)
+            .setUserAgent("AMPlayer/2.4.3 (Linux; Android 14) ExoPlayerLib/2.19.1")
             .setDefaultRequestProperties(
                 mapOf(
-                    "User-Agent" to "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
+                    "User-Agent" to "AMPlayer/2.4.3 (Linux; Android 14) ExoPlayerLib/2.19.1",
+                    "Icy-MetaData" to "1",
                     "Accept" to "*/*"
                 )
             )
@@ -204,6 +214,18 @@ class MusicPlayerManager(private val context: Context) {
             )
         }
 
+        val uri = Uri.parse(track.uri)
+        val uriStr = track.uri.lowercase()
+        val mimeType = when {
+            uriStr.contains(".m3u8") || uriStr.contains("/hls") -> androidx.media3.common.MimeTypes.APPLICATION_M3U8
+            uriStr.endsWith(".mp3") -> androidx.media3.common.MimeTypes.AUDIO_MPEG
+            uriStr.endsWith(".aac") -> androidx.media3.common.MimeTypes.AUDIO_AAC
+            uriStr.endsWith(".ogg") -> androidx.media3.common.MimeTypes.AUDIO_OGG
+            uriStr.endsWith(".flac") -> androidx.media3.common.MimeTypes.AUDIO_FLAC
+            uriStr.endsWith(".wav") -> androidx.media3.common.MimeTypes.AUDIO_WAV
+            else -> null
+        }
+
         val metadata = MediaMetadata.Builder()
             .setTitle(track.title)
             .setArtist(track.artist)
@@ -211,7 +233,12 @@ class MusicPlayerManager(private val context: Context) {
             .build()
 
         val mediaItem = MediaItem.Builder()
-            .setUri(Uri.parse(track.uri))
+            .setUri(uri)
+            .apply {
+                if (mimeType != null) {
+                    setMimeType(mimeType)
+                }
+            }
             .setMediaMetadata(metadata)
             .build()
 
@@ -372,10 +399,14 @@ class MusicPlayerManager(private val context: Context) {
             while (true) {
                 exoPlayer?.let { player ->
                     if (player.isPlaying) {
+                        val dur = player.duration
+                        val safeDur = if (dur == C.TIME_UNSET || dur <= 0L) {
+                            _state.value.currentTrack?.durationMs ?: 0L
+                        } else dur
                         _state.update {
                             it.copy(
-                                currentPositionMs = player.currentPosition,
-                                durationMs = player.duration.coerceAtLeast(0L)
+                                currentPositionMs = player.currentPosition.coerceAtLeast(0L),
+                                durationMs = safeDur
                             )
                         }
                     }
