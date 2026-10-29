@@ -118,7 +118,9 @@ fun MainHomeScreen(
                             logoDarkModeOpacity = settings.logoDarkModeOpacity,
                             onToggleDarkMode = onToggleDarkMode,
                             onPlayMedia = onPlayMedia,
-                            showVideoThumbnails = settings.showVideoThumbnails
+                            showVideoThumbnails = settings.showVideoThumbnails,
+                            dynamicAppIconWithAccent = settings.dynamicAppIconWithAccent,
+                            accentColorHex = settings.accentColorHex
                         )
                     }
                     BottomNavTab.MUSIC -> {

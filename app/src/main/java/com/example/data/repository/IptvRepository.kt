@@ -341,50 +341,6 @@ class IptvRepository(private val context: Context? = null) {
 
     private fun getPreloadedChannelsForCategory(category: String): List<IptvChannel> {
         return when (category) {
-            "Punjabi" -> listOf(
-                IptvChannel(
-                    id = "pb_1",
-                    name = "PTC Punjabi HD",
-                    category = "Punjabi",
-                    country = "India",
-                    streamUrl = "https://live.ptcpunjabi.com/hls/live/ptc_punjabi/master.m3u8"
-                ),
-                IptvChannel(
-                    id = "pb_2",
-                    name = "PTC News Live",
-                    category = "Punjabi",
-                    country = "India",
-                    streamUrl = "https://live.ptcpunjabi.com/hls/live/ptc_news/master.m3u8"
-                ),
-                IptvChannel(
-                    id = "pb_3",
-                    name = "Chardikla Time TV",
-                    category = "Punjabi",
-                    country = "India",
-                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/timetv/master.m3u8"
-                ),
-                IptvChannel(
-                    id = "pb_4",
-                    name = "9X Tashan HD",
-                    category = "Punjabi",
-                    country = "India",
-                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/9xtashan/master.m3u8"
-                ),
-                IptvChannel(
-                    id = "pb_5",
-                    name = "Fastway Punjabi",
-                    category = "Punjabi",
-                    country = "India",
-                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/fastway/master.m3u8"
-                ),
-                IptvChannel(
-                    id = "pb_6",
-                    name = "MH One Music",
-                    category = "Punjabi",
-                    country = "India",
-                    streamUrl = "https://d35j504z0x2vu2.cloudfront.net/v1/manifest/0414e72f4963e77c126554f4938eb5b260d8f347/mhone/master.m3u8"
-                )
-            )
             "India" -> listOf(
                 IptvChannel(
                     id = "in_1",
@@ -550,82 +506,6 @@ class IptvRepository(private val context: Context? = null) {
         }
     }
 
-    private fun getCuratedYouTubeLiveStreams(): List<IptvChannel> {
-        return listOf(
-            IptvChannel(
-                id = "yt_1",
-                name = "ICC Cricket Match Highlights & Live",
-                category = "Cricket",
-                country = "India",
-                streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4"
-            ),
-            IptvChannel(
-                id = "yt_2",
-                name = "T20 Cricket Watchalong Live",
-                category = "Cricket",
-                country = "India",
-                streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-            ),
-            IptvChannel(
-                id = "yt_3",
-                name = "Premier League Matchday Audio & Live",
-                category = "Football",
-                country = "UK",
-                streamUrl = "https://live.sky.com/hls/live/2007282/skynews_extra/master.m3u8"
-            ),
-            IptvChannel(
-                id = "yt_4",
-                name = "Champions League Football Live",
-                category = "Football",
-                country = "Global",
-                streamUrl = "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8"
-            ),
-            IptvChannel(
-                id = "yt_5",
-                name = "F1 Race Weekend Paddock Live",
-                category = "Motorsports",
-                country = "Global",
-                streamUrl = "https://mavtv-live.akamaized.net/hls/live/2026860/mavtv/master.m3u8"
-            ),
-            IptvChannel(
-                id = "yt_6",
-                name = "MotoGP Qualifying & Grand Prix",
-                category = "Motorsports",
-                country = "Global",
-                streamUrl = "https://wpt-live.akamaized.net/hls/live/2026859/wpt_live/master.m3u8"
-            ),
-            IptvChannel(
-                id = "yt_7",
-                name = "WWE SmackDown Live Stream & Reactions",
-                category = "Combat",
-                country = "USA",
-                streamUrl = "https://stadium-live.akamaized.net/hls/live/2014075/stadium/master.m3u8"
-            ),
-            IptvChannel(
-                id = "yt_8",
-                name = "UFC Fight Night Live Broadcast",
-                category = "Combat",
-                country = "USA",
-                streamUrl = "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT/master.m3u8"
-            ),
-            IptvChannel(
-                id = "yt_9",
-                name = "NBA Tonight Game Day Live",
-                category = "Basketball",
-                country = "USA",
-                streamUrl = "https://stadium-live.akamaized.net/hls/live/2014075/stadium/master.m3u8"
-            ),
-            IptvChannel(
-                id = "yt_10",
-                name = "Wimbledon & Grand Slam Tennis Live",
-                category = "Tennis",
-                country = "UK",
-                streamUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4"
-            )
-        )
-    }
-
-    
     fun createFolder(name: String, colorHex: String, iconName: String, initialStreamUrl: String? = null): IptvPlaylistFolder {
         val initialChannelList = if (!initialStreamUrl.isNullOrBlank()) {
             listOf(

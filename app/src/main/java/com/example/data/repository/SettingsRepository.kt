@@ -32,7 +32,8 @@ data class AppSettingsState(
     val subtitleTextColorHex: String = "#FFFFFF",
     val subtitleBackgroundColorHex: String = "#80000000",
     val subtitleProvidersEnabled: Boolean = true,
-    val fileBrowserShowHidden: Boolean = false
+    val fileBrowserShowHidden: Boolean = false,
+    val dynamicAppIconWithAccent: Boolean = true
 )
 
 class SettingsRepository(private val context: Context) {
@@ -66,13 +67,19 @@ class SettingsRepository(private val context: Context) {
             subtitleTextColorHex = prefs.getString(KEY_SUB_TEXT_COLOR, "#FFFFFF") ?: "#FFFFFF",
             subtitleBackgroundColorHex = prefs.getString(KEY_SUB_BG_COLOR, "#80000000") ?: "#80000000",
             subtitleProvidersEnabled = prefs.getBoolean(KEY_SUB_PROVIDERS, true),
-            fileBrowserShowHidden = prefs.getBoolean(KEY_BROWSER_SHOW_HIDDEN, false)
+            fileBrowserShowHidden = prefs.getBoolean(KEY_BROWSER_SHOW_HIDDEN, false),
+            dynamicAppIconWithAccent = prefs.getBoolean(KEY_DYNAMIC_APP_ICON, true)
         )
     }
 
     fun setDarkMode(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_DARK_MODE, enabled).apply()
         _settings.value = _settings.value.copy(isDarkMode = enabled)
+    }
+
+    fun setDynamicAppIconWithAccent(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DYNAMIC_APP_ICON, enabled).apply()
+        _settings.value = _settings.value.copy(dynamicAppIconWithAccent = enabled)
     }
 
     fun setAccentColor(colorHex: String) {
@@ -247,6 +254,7 @@ class SettingsRepository(private val context: Context) {
             if (json.has("subtitleFontSize")) setSubtitleFontSize(json.getInt("subtitleFontSize"))
             if (json.has("subtitleTextColorHex")) setSubtitleTextColor(json.getString("subtitleTextColorHex"))
             if (json.has("fileBrowserShowHidden")) setFileBrowserShowHidden(json.getBoolean("fileBrowserShowHidden"))
+            if (json.has("dynamicAppIconWithAccent")) setDynamicAppIconWithAccent(json.getBoolean("dynamicAppIconWithAccent"))
             true
         } catch (_: Exception) {
             false
@@ -257,6 +265,7 @@ class SettingsRepository(private val context: Context) {
         private const val PREFS_NAME = "am_player_app_settings"
         private const val KEY_DARK_MODE = "pref_dark_mode"
         private const val KEY_ACCENT_COLOR = "pref_accent_color"
+        private const val KEY_DYNAMIC_APP_ICON = "pref_dynamic_app_icon"
         private const val KEY_LOGO_OPACITY = "pref_logo_opacity"
         private const val KEY_GESTURE_CONTROLS = "pref_gesture_controls"
         private const val KEY_ONLINE_MUSIC = "pref_online_music"

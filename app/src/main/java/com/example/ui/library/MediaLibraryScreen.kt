@@ -109,6 +109,8 @@ fun MediaLibraryScreen(
     isDarkMode: Boolean,
     logoDarkModeOpacity: Float = 1.0f,
     showVideoThumbnails: Boolean = true,
+    dynamicAppIconWithAccent: Boolean = true,
+    accentColorHex: String = "#4D6BFE",
     onToggleDarkMode: (Boolean) -> Unit,
     onPlayMedia: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -271,7 +273,9 @@ fun MediaLibraryScreen(
                             Image(
                                 painter = painterResource(id = R.drawable.am_player_logo),
                                 contentDescription = "AM Player Logo",
-                                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.primary),
+                                colorFilter = ColorFilter.tint(
+                                    if (dynamicAppIconWithAccent) com.example.ui.theme.parseHexColor(accentColorHex) else MaterialTheme.colorScheme.primary
+                                ),
                                 alpha = if (isDarkMode) logoDarkModeOpacity else 1.0f,
                                 modifier = Modifier
                                     .size(38.dp)

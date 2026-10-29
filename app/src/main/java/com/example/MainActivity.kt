@@ -53,6 +53,46 @@ class MainActivity : ComponentActivity() {
             var currentPlayingUri by remember { mutableStateOf(intentUri) }
             var currentTab by rememberSaveable { mutableStateOf(BottomNavTab.HOME) }
 
+            val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+            ) { permissionsMap ->
+                val granted = permissionsMap.values.any { it }
+                libraryViewModel.setPermissionGranted(granted)
+                if (granted) {
+                    lifecycleScope.launch(Dispatchers.IO) {
+                        container.mediaRepository.rescanLocalMedia()
+                        container.musicRepository.rescanAudio()
+                    }
+                }
+            }
+
+            LaunchedEffect(Unit) {
+                val hasPerm = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        android.Manifest.permission.READ_MEDIA_VIDEO
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                } else {
+                    androidx.core.content.ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        android.Manifest.permission.READ_EXTERNAL_STORAGE
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                }
+                libraryViewModel.setPermissionGranted(hasPerm)
+                if (!hasPerm) {
+                    val perms = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        arrayOf(
+                            android.Manifest.permission.READ_MEDIA_VIDEO,
+                            android.Manifest.permission.READ_MEDIA_AUDIO,
+                            android.Manifest.permission.POST_NOTIFICATIONS
+                        )
+                    } else {
+                        arrayOf(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+                    }
+                    permissionLauncher.launch(perms)
+                }
+            }
+
             LaunchedEffect(intentUri) {
                 if (!intentUri.isNullOrEmpty()) {
                     currentPlayingUri = intentUri
@@ -88,6 +128,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        libraryViewModel.checkPermission()
     }
 
     override fun onNewIntent(intent: Intent) {
