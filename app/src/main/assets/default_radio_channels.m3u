@@ -1,62 +1,98 @@
 #EXTM3U
 
-#EXTINF:-1 group-title="Pop Hits",BBC Radio 1 (UK)
-https://stream.live.vc.bbcmedia.co.uk/bbc_radio_one
-#EXTINF:-1 group-title="Pop Hits",BBC Radio 2 (UK)
-https://stream.live.vc.bbcmedia.co.uk/bbc_radio_two
-#EXTINF:-1 group-title="News",BBC World Service News
-https://stream.live.vc.bbcmedia.co.uk/bbc_world_service
-#EXTINF:-1 group-title="News",NPR 24 Hour Program Stream
-https://npr-ice.streamguys1.com/live.mp3
-#EXTINF:-1 group-title="News",Capital FM London
-https://media-ice.musicradio.com/CapitalMP3
-#EXTINF:-1 group-title="Pop Hits",Heart FM UK
-https://media-ice.musicradio.com/HeartLondonMP3
-#EXTINF:-1 group-title="Rock",Radio X UK
-https://media-ice.musicradio.com/RadioXLondonMP3
-#EXTINF:-1 group-title="Classical",Classic FM UK
-https://media-ice.musicradio.com/ClassicFMMP3
-#EXTINF:-1 group-title="Jazz",Jazz FM UK
-https://icecast.bauerservices.com/jazzfm.mp3
-#EXTINF:-1 group-title="Electronic",Defected Radio Ibiza
-https://stream.defected.com/radio.mp3
-#EXTINF:-1 group-title="Electronic",Ibiza Global Radio
-https://listens.live/ibizaglobalradio.mp3
-#EXTINF:-1 group-title="Electronic",DI.FM Chillout Lounge
-https://prem2.di.fm:443/chillout_hi
-#EXTINF:-1 group-title="Pop Hits",KEXP 90.3 FM Seattle
-https://kexp-mp3-128.streamguys1.com/kexp128.mp3
-#EXTINF:-1 group-title="Classical",WQXR 105.9 FM New York
-https://stream.wqxr.org/wqxr
-#EXTINF:-1 group-title="News",LBC News London
-https://media-ice.musicradio.com/LBCUKMP3
-#EXTINF:-1 group-title="Pop Hits",Virgin Radio UK
-https://radio.virginradio.co.uk/stream
-#EXTINF:-1 group-title="Pop Hits",KISS FM UK
-https://icecast.bauerservices.com/kiss.mp3
-#EXTINF:-1 group-title="World",Radio Mirchi Hindi Hits
-https://ice5.somafm.com/suburbsofgoa-128-mp3
-#EXTINF:-1 group-title="World",BBC Asian Network News & Beats
-https://stream.live.vc.bbcmedia.co.uk/bbc_asian_network
-#EXTINF:-1 group-title="World",Radio City Desi Bollywood
+# ==================== INDIAN RADIO CHANNELS ====================
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",AIR Vividh Bharati Live
+https://air.pc.cdn.bitgravity.com/air/live/pbaudio001/playlist.m3u8
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Radio Mirchi 98.3 FM Hits
+https://stream.zeno.fm/f3wvbbqmdg8uv
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Radio City Hindi Bollywood
 https://prclive4.listenon.in/Hindi
-#EXTINF:-1 group-title="Rock",Absolute Radio UK
-https://icecast.bauerservices.com/absoluteradio.mp3
-#EXTINF:-1 group-title="Rock",Planet Rock UK
-https://icecast.bauerservices.com/planetrock.mp3
-#EXTINF:-1 group-title="Electronic",SomaFM Groove Salad
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Radio City Bollywood Hits
+https://prclive4.listenon.in/Bollywood
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",AIR FM Gold Delhi 106.4 FM
+https://air.pc.cdn.bitgravity.com/air/live/pbaudio002/playlist.m3u8
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",AIR FM Rainbow Delhi 102.6 FM
+https://air.pc.cdn.bitgravity.com/air/live/pbaudio003/playlist.m3u8
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Bollywood Gaane Purane Classic
+https://stream.zeno.fm/s49uq411tg8uv
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Radio City Punjabi Hits
+https://prclive4.listenon.in/Punjabi
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",BBC Asian Network News & Music
+https://stream.live.vc.bbcmedia.co.uk/bbc_asian_network
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Suburbs of Goa Asian Beats
+https://ice5.somafm.com/suburbsofgoa-128-mp3
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Hungama Bollywood Evergreen
+https://stream.zeno.fm/a8v4r842tg8uv
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Radio City Freedom Indie
+https://prclive4.listenon.in/Freedom
+
+#EXTINF:-1 group-title="Indian Radio" tvg-country="IN",Hindi Desi Beats 24/7
+https://stream.zeno.fm/4w9wnv3yn0hvv
+
+# ==================== INTERNATIONAL RADIO CHANNELS ====================
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",BBC World Service Live News
+https://stream.live.vc.bbcmedia.co.uk/bbc_world_service
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",BBC Radio 1 Pop Hits
+https://stream.live.vc.bbcmedia.co.uk/bbc_radio_one
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",BBC Radio 2 Contemporary
+https://stream.live.vc.bbcmedia.co.uk/bbc_radio_two
+
+#EXTINF:-1 group-title="International Radio" tvg-country="US",NPR 24-Hour Live News Stream
+https://npr-ice.streamguys1.com/live.mp3
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",Capital FM London Top 40
+https://media-ice.musicradio.com/CapitalMP3
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",Heart FM UK London
+https://media-ice.musicradio.com/HeartLondonMP3
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",Classic FM UK Classical
+https://media-ice.musicradio.com/ClassicFMMP3
+
+#EXTINF:-1 group-title="International Radio" tvg-country="US",KEXP 90.3 FM Seattle
+https://kexp-mp3-128.streamguys1.com/kexp128.mp3
+
+#EXTINF:-1 group-title="International Radio" tvg-country="US",WQXR 105.9 FM New York
+https://stream.wqxr.org/wqxr
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",Jazz FM UK Jazz & Soul
+https://icecast.bauerservices.com/jazzfm.mp3
+
+#EXTINF:-1 group-title="International Radio" tvg-country="US",SomaFM Groove Salad Chillout
 https://ice6.somafm.com/groovesalad-128-mp3
-#EXTINF:-1 group-title="Electronic",SomaFM Drone Zone
+
+#EXTINF:-1 group-title="International Radio" tvg-country="US",SomaFM Drone Zone Ambient
 https://ice6.somafm.com/dronezone-128-mp3
-#EXTINF:-1 group-title="Electronic",SomaFM Indie Pop Rocks
+
+#EXTINF:-1 group-title="International Radio" tvg-country="US",SomaFM Indie Pop Rocks
 https://ice6.somafm.com/indiepop-128-mp3
-#EXTINF:-1 group-title="Jazz",WBGO 88.3 FM New York Jazz
-https://wbgo.streamguys1.com/wbgo128
-#EXTINF:-1 group-title="World",Radio France Internationale
+
+#EXTINF:-1 group-title="International Radio" tvg-country="ES",Defected Radio Ibiza House
+https://stream.defected.com/radio.mp3
+
+#EXTINF:-1 group-title="International Radio" tvg-country="FR",Radio France Internationale RFI
 https://icepe8.infomaniak.ch/rfianglais-128.mp3
-#EXTINF:-1 group-title="Pop Hits",Antenne Bayern Top 40
-https://stream.antenne.de/antenne/stream/mp3
-#EXTINF:-1 group-title="Pop Hits",NRJ Hit Music Only France
-https://scdn.nrjaudio.fm/adwz1/fr/30001/mp3_128.mp3
-#EXTINF:-1 group-title="Electronic",Sunshine Live Germany
-https://stream.sunshine-live.de/live/mp3-192
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",Virgin Radio UK Pop Rock
+https://radio.virginradio.co.uk/stream
+
+#EXTINF:-1 group-title="International Radio" tvg-country="UK",Absolute Radio UK Rock
+https://icecast.bauerservices.com/absoluteradio.mp3
+
+#EXTINF:-1 group-title="International Radio" tvg-country="ES",Ibiza Global Radio Electronic
+https://listens.live/ibizaglobalradio.mp3

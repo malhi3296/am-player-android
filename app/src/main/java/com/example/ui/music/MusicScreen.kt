@@ -136,11 +136,12 @@ fun MusicScreen(
     var showEqualizerDialog by remember { mutableStateOf(false) }
     var showAddStreamDialog by remember { mutableStateOf(false) }
 
-    // View modes: "Songs", "Albums", "Artists", "Folders"
+    // View modes: "Songs", "Albums", "Artists", "Folders", "Radio"
     var viewMode by remember { mutableStateOf("Songs") }
     var selectedAlbum by remember { mutableStateOf<String?>(null) }
     var selectedArtist by remember { mutableStateOf<String?>(null) }
     var selectedFolder by remember { mutableStateOf<String?>(null) }
+    var selectedRadioFolder by remember { mutableStateOf<String?>(null) }
 
     // Sorting: "A-Z", "Z-A", "Duration", "Artist"
     var sortOrder by remember { mutableStateOf("A-Z") }
@@ -149,12 +150,13 @@ fun MusicScreen(
     val coroutineScope = rememberCoroutineScope()
 
     // Handle back button when full screen player or sub-view is open
-    BackHandler(enabled = isFullScreenPlayer || selectedAlbum != null || selectedArtist != null || selectedFolder != null) {
+    BackHandler(enabled = isFullScreenPlayer || selectedAlbum != null || selectedArtist != null || selectedFolder != null || selectedRadioFolder != null) {
         when {
             isFullScreenPlayer -> isFullScreenPlayer = false
             selectedAlbum != null -> selectedAlbum = null
             selectedArtist != null -> selectedArtist = null
             selectedFolder != null -> selectedFolder = null
+            selectedRadioFolder != null -> selectedRadioFolder = null
         }
     }
 
@@ -217,18 +219,19 @@ fun MusicScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (selectedAlbum != null || selectedArtist != null || selectedFolder != null) {
+                    if (selectedAlbum != null || selectedArtist != null || selectedFolder != null || selectedRadioFolder != null) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = {
                                 selectedAlbum = null
                                 selectedArtist = null
                                 selectedFolder = null
+                                selectedRadioFolder = null
                             }) {
                                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = MaterialTheme.colorScheme.onBackground)
                             }
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = selectedAlbum ?: selectedArtist ?: selectedFolder ?: "Music",
+                                text = selectedAlbum ?: selectedArtist ?: selectedFolder ?: selectedRadioFolder ?: "Music",
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onBackground,
@@ -312,8 +315,8 @@ fun MusicScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // View Modes: Songs, Albums, Artists, Folders (Item 32)
-                if (selectedAlbum == null && selectedArtist == null && selectedFolder == null) {
+                // View Modes: Songs, Albums, Artists, Folders, Radio
+                if (selectedAlbum == null && selectedArtist == null && selectedFolder == null && selectedRadioFolder == null) {
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -323,7 +326,10 @@ fun MusicScreen(
                             item {
                                 FilterChip(
                                     selected = isSelected,
-                                    onClick = { viewMode = mode },
+                                    onClick = { 
+                                        viewMode = mode 
+                                        selectedRadioFolder = null
+                                    },
                                     label = { Text(mode, fontSize = 12.sp) },
                                     colors = FilterChipDefaults.filterChipColors(
                                         selectedContainerColor = MaterialTheme.colorScheme.primary,
@@ -519,134 +525,264 @@ fun MusicScreen(
                     }
 
                     viewMode == "Radio" -> {
-                        val filteredRadios = remember(radioStations, searchQuery) {
-                            radioStations.filter { radio ->
-                                searchQuery.isBlank() ||
-                                    radio.name.contains(searchQuery, ignoreCase = true) ||
-                                    radio.category.contains(searchQuery, ignoreCase = true) ||
-                                    radio.country.contains(searchQuery, ignoreCase = true)
-                            }
+                        val indianStations = remember(radioStations) {
+                            radioStations.filter { it.category.contains("Indian", ignoreCase = true) || it.country.equals("IN", ignoreCase = true) }
+                        }
+                        val intlStations = remember(radioStations) {
+                            radioStations.filter { it.category.contains("International", ignoreCase = true) || !it.country.equals("IN", ignoreCase = true) }
                         }
 
-                        if (filteredRadios.isEmpty()) {
-                            Box(
-                                modifier = Modifier.weight(1f).fillMaxWidth(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(Icons.Default.Radio, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text("No Radio Stations Found", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                                }
-                            }
-                        } else {
+                        if (selectedRadioFolder == null && searchQuery.isBlank()) {
+                            // Two distinct folder cards: "Indian Radio" and "International Radio"
                             LazyColumn(
-                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp),
                                 modifier = Modifier.weight(1f).fillMaxWidth()
                             ) {
-                                items(filteredRadios, key = { it.id }) { station ->
-                                    val isCurrent = playerState.currentTrack?.id == station.id
-                                    val isPlaying = isCurrent && playerState.isPlaying
-
+                                item {
                                     Surface(
-                                        shape = RoundedCornerShape(12.dp),
-                                        color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
-                                        border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable {
-                                                val radioTrack = AudioTrack(
-                                                    id = station.id,
-                                                    uri = station.streamUrl,
-                                                    title = station.name,
-                                                    artist = station.category.ifBlank { "Live Radio" },
-                                                    album = "Live Radio (${station.country})",
-                                                    folderName = "Radio",
-                                                    durationMs = 0L,
-                                                    sizeBytes = 0L
-                                                )
-                                                val allRadioTracks = filteredRadios.map {
-                                                    AudioTrack(
-                                                        id = it.id,
-                                                        uri = it.streamUrl,
-                                                        title = it.name,
-                                                        artist = it.category.ifBlank { "Live Radio" },
-                                                        album = "Live Radio (${it.country})",
-                                                        folderName = "Radio",
-                                                        durationMs = 0L,
-                                                        sizeBytes = 0L
-                                                    )
-                                                }
-                                                playerManager.playTrack(radioTrack, allRadioTracks)
-                                            }
+                                            .clickable { selectedRadioFolder = "Indian Radio" }
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(12.dp),
+                                            modifier = Modifier.padding(16.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Box(
                                                 modifier = Modifier
-                                                    .size(42.dp)
-                                                    .clip(RoundedCornerShape(10.dp))
-                                                    .background(if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface),
+                                                    .size(52.dp)
+                                                    .clip(RoundedCornerShape(14.dp))
+                                                    .background(
+                                                        Brush.linearGradient(
+                                                            listOf(Color(0xFFFF9933), Color(0xFF138808))
+                                                        )
+                                                    ),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
-                                                    imageVector = if (isPlaying) Icons.Default.GraphicEq else Icons.Default.Radio,
+                                                    imageVector = Icons.Default.Radio,
                                                     contentDescription = null,
-                                                    tint = if (isPlaying) Color.White else MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(24.dp)
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(28.dp)
                                                 )
                                             }
-                                            Spacer(modifier = Modifier.width(12.dp))
+                                            Spacer(modifier = Modifier.width(16.dp))
                                             Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = station.name,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    fontSize = 14.sp,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                    text = "Indian Radio",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 16.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface
                                                 )
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(
-                                                        text = station.category.ifBlank { "Radio" },
-                                                        fontSize = 11.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                    if (station.country.isNotBlank()) {
-                                                        Text(
-                                                            text = " • ${station.country}",
-                                                            fontSize = 11.sp,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
-                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "${indianStations.size} Channels • AIR Vividh Bharati, Mirchi, City & more",
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
-                                            IconButton(
-                                                onClick = {
+                                            Icon(
+                                                imageVector = Icons.Default.Folder,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                item {
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { selectedRadioFolder = "International Radio" }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(16.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(52.dp)
+                                                    .clip(RoundedCornerShape(14.dp))
+                                                    .background(
+                                                        Brush.linearGradient(
+                                                            listOf(Color(0xFF2196F3), Color(0xFF9C27B0))
+                                                        )
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Public,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.width(16.dp))
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "International Radio",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 16.sp,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "${intlStations.size} Channels • BBC World, NPR, Capital FM & more",
+                                                    fontSize = 12.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.Folder,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            val activeStations = remember(radioStations, selectedRadioFolder, searchQuery) {
+                                val pool = when (selectedRadioFolder) {
+                                    "Indian Radio" -> indianStations
+                                    "International Radio" -> intlStations
+                                    else -> radioStations
+                                }
+                                pool.filter { radio ->
+                                    searchQuery.isBlank() ||
+                                        radio.name.contains(searchQuery, ignoreCase = true) ||
+                                        radio.category.contains(searchQuery, ignoreCase = true) ||
+                                        radio.country.contains(searchQuery, ignoreCase = true)
+                                }
+                            }
+
+                            if (activeStations.isEmpty()) {
+                                Box(
+                                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.Radio, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(48.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Text("No Radio Stations Found", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                                    }
+                                }
+                            } else {
+                                LazyColumn(
+                                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.weight(1f).fillMaxWidth()
+                                ) {
+                                    items(activeStations, key = { it.id }) { station ->
+                                        val isCurrent = playerState.currentTrack?.id == station.id
+                                        val isPlaying = isCurrent && playerState.isPlaying
+
+                                        Surface(
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = if (isCurrent) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant,
+                                            border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
                                                     val radioTrack = AudioTrack(
                                                         id = station.id,
                                                         uri = station.streamUrl,
                                                         title = station.name,
                                                         artist = station.category.ifBlank { "Live Radio" },
                                                         album = "Live Radio (${station.country})",
-                                                        folderName = "Radio",
+                                                        folderName = selectedRadioFolder ?: "Radio",
                                                         durationMs = 0L,
                                                         sizeBytes = 0L
                                                     )
-                                                    if (isCurrent) {
-                                                        playerManager.togglePlayPause()
-                                                    } else {
-                                                        playerManager.playTrack(radioTrack, listOf(radioTrack))
+                                                    val allRadioTracks = activeStations.map {
+                                                        AudioTrack(
+                                                            id = it.id,
+                                                            uri = it.streamUrl,
+                                                            title = it.name,
+                                                            artist = it.category.ifBlank { "Live Radio" },
+                                                            album = "Live Radio (${it.country})",
+                                                            folderName = selectedRadioFolder ?: "Radio",
+                                                            durationMs = 0L,
+                                                            sizeBytes = 0L
+                                                        )
+                                                    }
+                                                    playerManager.playTrack(radioTrack, allRadioTracks)
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(42.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(if (isPlaying) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isPlaying) Icons.Default.GraphicEq else Icons.Default.Radio,
+                                                        contentDescription = null,
+                                                        tint = if (isPlaying) Color.White else MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(12.dp))
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = station.name,
+                                                        fontWeight = FontWeight.SemiBold,
+                                                        fontSize = 14.sp,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text(
+                                                            text = station.category.ifBlank { "Radio" },
+                                                            fontSize = 11.sp,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                        if (station.country.isNotBlank()) {
+                                                            Text(
+                                                                text = " • ${station.country}",
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
                                                     }
                                                 }
-                                            ) {
-                                                Icon(
-                                                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                                    contentDescription = "Play/Pause",
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
+                                                IconButton(
+                                                    onClick = {
+                                                        val radioTrack = AudioTrack(
+                                                            id = station.id,
+                                                            uri = station.streamUrl,
+                                                            title = station.name,
+                                                            artist = station.category.ifBlank { "Live Radio" },
+                                                            album = "Live Radio (${station.country})",
+                                                            folderName = selectedRadioFolder ?: "Radio",
+                                                            durationMs = 0L,
+                                                            sizeBytes = 0L
+                                                        )
+                                                        if (isCurrent) {
+                                                            playerManager.togglePlayPause()
+                                                        } else {
+                                                            playerManager.playTrack(radioTrack, listOf(radioTrack))
+                                                        }
+                                                    }
+                                                ) {
+                                                    Icon(
+                                                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                                        contentDescription = "Play/Pause",
+                                                        tint = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
                                             }
                                         }
                                     }

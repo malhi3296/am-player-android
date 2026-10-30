@@ -98,31 +98,34 @@ class ExoPlayerManager(private val context: Context) {
             try {
                 loudnessEnhancer?.release()
                 loudnessEnhancer = LoudnessEnhancer(audioSessionId).apply {
-                    enabled = true
+                    enabled = false // Disabled by default (Requirement 8)
                 }
             } catch (_: Exception) {}
         }
     }
 
     /**
-     * Volume range: 0.0f to 2.0f (up to 200% Audio Boost)
+     * Volume range: 0.0f to 2.0f (only goes above 1.0f if boostAllowed is true)
      */
-    fun setVolumeWithBoost(volume: Float) {
-        val clamped = volume.coerceIn(0.0f, 2.0f)
+    fun setVolumeWithBoost(volume: Float, boostAllowed: Boolean = false) {
+        val maxLimit = if (boostAllowed) 2.0f else 1.0f
+        val clamped = volume.coerceIn(0.0f, maxLimit)
         currentVolumeMultiplier = clamped
         val player = exoPlayer ?: return
 
-        if (clamped <= 1.0f) {
-            player.volume = clamped
+        if (clamped <= 1.0f || !boostAllowed) {
+            player.volume = clamped.coerceAtMost(1.0f)
             try {
                 loudnessEnhancer?.setTargetGain(0)
+                loudnessEnhancer?.enabled = false
             } catch (_: Exception) {}
         } else {
-            // Maximum standard volume + Hardware LoudnessEnhancer gain boost
+            // Maximum standard volume + Hardware LoudnessEnhancer gain boost only if enabled
             player.volume = 1.0f
             val boostRatio = clamped - 1.0f // 0.0 to 1.0
             val gainMb = (boostRatio * 1000).toInt() // +0 to +1000 mB (+10 dB)
             try {
+                loudnessEnhancer?.enabled = true
                 loudnessEnhancer?.setTargetGain(gainMb)
             } catch (_: Exception) {}
         }

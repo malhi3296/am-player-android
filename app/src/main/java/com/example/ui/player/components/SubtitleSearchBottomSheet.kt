@@ -102,6 +102,12 @@ fun SubtitleSearchBottomSheet(
         "ja" to "Japanese"
     )
 
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (searchQuery.isNotBlank() && candidates.isEmpty()) {
+            onSearch(searchQuery, selectedLang)
+        }
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -165,80 +171,9 @@ fun SubtitleSearchBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Subtitle Delay & Sync Control
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = DarkSurfaceElevated,
-                border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Sync,
-                                contentDescription = "Subtitle Sync Delay",
-                                tint = PurpleNeon,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Subtitle Sync Offset",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
-                            )
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            val delaySec = subtitleDelayMs.toFloat() / 1000f
-                            val sign = if (subtitleDelayMs > 0) "+" else ""
-                            Text(
-                                text = "$sign${"%.1f".format(delaySec)}s",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (subtitleDelayMs == 0L) TextSecondary else CyanNeon
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            IconButton(
-                                onClick = { onDelayChange(0L) },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Replay,
-                                    contentDescription = "Reset Sync Offset",
-                                    tint = TextMuted,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    var sliderDelay by remember(subtitleDelayMs) { mutableFloatStateOf(subtitleDelayMs.toFloat()) }
-                    Slider(
-                        value = sliderDelay,
-                        onValueChange = { sliderDelay = it },
-                        onValueChangeFinished = { onDelayChange(sliderDelay.toLong()) },
-                        valueRange = -10000f..10000f,
-                        colors = SliderDefaults.colors(
-                            thumbColor = PurpleNeon,
-                            activeTrackColor = PurpleNeon,
-                            inactiveTrackColor = Color(0x33FFFFFF)
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Search Bar & Language Chips
+            // Search Bar at TOP so keyboard never covers it (Requirement 3)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
@@ -284,7 +219,7 @@ fun SubtitleSearchBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Language Selector Row
             LazyRow(
@@ -315,7 +250,7 @@ fun SubtitleSearchBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             // Results Header
             Row(
@@ -336,14 +271,14 @@ fun SubtitleSearchBottomSheet(
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Subtitle Candidates List
             LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(280.dp)
+                    .height(200.dp)
             ) {
                 items(candidates) { candidate ->
                     SubtitleCandidateCard(
@@ -354,7 +289,78 @@ fun SubtitleSearchBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Subtitle Delay & Sync Control (Placed at bottom of sheet)
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = DarkSurfaceElevated,
+                border = androidx.compose.foundation.BorderStroke(1.dp, DarkBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Sync,
+                                contentDescription = "Subtitle Sync Delay",
+                                tint = PurpleNeon,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Subtitle Sync Offset",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val delaySec = subtitleDelayMs.toFloat() / 1000f
+                            val sign = if (subtitleDelayMs > 0) "+" else ""
+                            Text(
+                                text = "$sign${"%.1f".format(delaySec)}s",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (subtitleDelayMs == 0L) TextSecondary else CyanNeon
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            IconButton(
+                                onClick = { onDelayChange(0L) },
+                                modifier = Modifier.size(22.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Replay,
+                                    contentDescription = "Reset Sync Offset",
+                                    tint = TextMuted,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    var sliderDelay by remember(subtitleDelayMs) { mutableFloatStateOf(subtitleDelayMs.toFloat()) }
+                    Slider(
+                        value = sliderDelay,
+                        onValueChange = { sliderDelay = it },
+                        onValueChangeFinished = { onDelayChange(sliderDelay.toLong()) },
+                        valueRange = -10000f..10000f,
+                        colors = SliderDefaults.colors(
+                            thumbColor = PurpleNeon,
+                            activeTrackColor = PurpleNeon,
+                            inactiveTrackColor = Color(0x33FFFFFF)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
         }
     }
 }

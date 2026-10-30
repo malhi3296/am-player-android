@@ -178,6 +178,30 @@ class MediaRepository(
         if (discovered.isNotEmpty()) {
             mediaDao.insertAll(discovered)
         }
+
+        // Reconcile and prune items from DB that were deleted externally from Gallery/storage
+        try {
+            val currentInDb = mediaDao.getAllMediaSync()
+            val discoveredIds = discovered.map { it.id }.toSet()
+            val vaultPrefs = context.getSharedPreferences("am_player_secret_vault", Context.MODE_PRIVATE)
+            val hiddenIds = vaultPrefs.getStringSet("vault_hidden_ids", emptySet()) ?: emptySet()
+
+            val missingIds = currentInDb.filter { item ->
+                // Never prune items that are protected in Secret Vault
+                if (hiddenIds.contains(item.id)) return@filter false
+
+                if (item.uri.startsWith("content://")) {
+                    item.id !in discoveredIds
+                } else if (item.uri.startsWith("file://")) {
+                    !File(Uri.parse(item.uri).path ?: "").exists()
+                } else false
+            }.map { it.id }
+
+            if (missingIds.isNotEmpty()) {
+                mediaDao.deleteByIds(missingIds)
+            }
+        } catch (_: Exception) {}
+
         discovered
     }
 

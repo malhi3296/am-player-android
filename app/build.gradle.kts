@@ -16,8 +16,8 @@ android {
     applicationId = "com.aistudio.amplayer.kzpvmq"
     minSdk = 24
     targetSdk = 36
-    versionCode = 243
-    versionName = "2.4.3"
+    versionCode = 244
+    versionName = "2.4.4"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

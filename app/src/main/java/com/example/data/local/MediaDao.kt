@@ -12,6 +12,9 @@ interface MediaDao {
     @Query("SELECT * FROM media_items ORDER BY lastPlayedTimestamp DESC, title ASC")
     fun getAllMedia(): Flow<List<MediaItemEntity>>
 
+    @Query("SELECT * FROM media_items")
+    suspend fun getAllMediaSync(): List<MediaItemEntity>
+
     @Query("SELECT * FROM media_items WHERE playbackPositionMs > 0 ORDER BY lastPlayedTimestamp DESC LIMIT 10")
     fun getRecentMedia(): Flow<List<MediaItemEntity>>
 

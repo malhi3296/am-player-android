@@ -280,12 +280,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val isLive = isStream && (item.uri.contains(".m3u8", ignoreCase = true) || matchingChannel != null || item.resolution == "Live Stream")
 
             if (isLive) {
-                val allFolders = container.iptvRepository.folders.value
-                val matchingFolder = allFolders.firstOrNull { folder ->
-                    folder.channels.any { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) }
+                val currentChannels = _uiState.value.currentIptvChannels
+                val channelList = if (currentChannels.isNotEmpty() && currentChannels.any { 
+                        it.streamUrl.equals(mediaUriOrId, ignoreCase = true) || it.id.equals(mediaUriOrId, ignoreCase = true) 
+                    }) {
+                    // Retain current active playlist folder so Next/Prev navigates sequentially! (Requirement 7)
+                    currentChannels
+                } else {
+                    val allFolders = container.iptvRepository.folders.value
+                    val matchingFolder = allFolders.firstOrNull { folder ->
+                        folder.channels.any { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) || it.id.equals(mediaUriOrId, ignoreCase = true) }
+                    }
+                    matchingFolder?.channels ?: container.iptvRepository.channels.value
                 }
-                val channelList = matchingFolder?.channels ?: container.iptvRepository.channels.value
-                val cIndex = channelList.indexOfFirst { it.streamUrl.equals(mediaUriOrId, ignoreCase = true) }.coerceAtLeast(0)
+                val cIndex = channelList.indexOfFirst { 
+                    it.streamUrl.equals(mediaUriOrId, ignoreCase = true) || it.id.equals(mediaUriOrId, ignoreCase = true) 
+                }.coerceAtLeast(0)
                 _uiState.update {
                     it.copy(
                         isIptvStream = true,
@@ -436,9 +446,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (_uiState.value.isLocked) return
         if (isRightSide) {
             // Volume adjustment: deltaFraction positive is up
+            val boostAllowed = container.settingsRepository.settings.value.audioBoostEnabled
+            val maxVol = if (boostAllowed) 2.0f else 1.0f
             val currentVol = _uiState.value.volume
-            val newVol = (currentVol + deltaFraction * 1.5f).coerceIn(0.0f, 2.0f)
-            playerManager.setVolumeWithBoost(newVol)
+            val newVol = (currentVol + deltaFraction * 1.5f).coerceIn(0.0f, maxVol)
+            playerManager.setVolumeWithBoost(newVol, boostAllowed)
             _uiState.update {
                 it.copy(
                     volume = newVol,

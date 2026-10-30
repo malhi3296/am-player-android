@@ -218,7 +218,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Version 2.4.3",
+                        text = "Version 2.4.4",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -509,7 +509,7 @@ fun SettingsScreen(
 
             SettingClickableItem(
                 title = "Export Settings",
-                subtitle = "Copy application settings to JSON format",
+                subtitle = "Export configuration to JSON file or clipboard",
                 trailing = {
                     Icon(Icons.Default.ContentCopy, contentDescription = null, tint = parseHexColor(settings.accentColorHex), modifier = Modifier.size(18.dp))
                 },
@@ -1069,17 +1069,45 @@ fun SettingsScreen(
                 }
             },
             confirmButton = {
-                Button(
-                    onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val clip = ClipData.newPlainText("AM Player Settings", jsonStr)
-                        clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, "Settings copied to clipboard", Toast.LENGTH_SHORT).show()
-                        showExportDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = parseHexColor(settings.accentColorHex))
-                ) {
-                    Text("Copy to Clipboard")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = {
+                            try {
+                                val backupFile = java.io.File(context.cacheDir, "AMPlayer_Settings_Backup.json")
+                                backupFile.writeText(jsonStr)
+                                val uri = androidx.core.content.FileProvider.getUriForFile(
+                                    context,
+                                    "${context.packageName}.fileprovider",
+                                    backupFile
+                                )
+                                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "application/json"
+                                    putExtra(Intent.EXTRA_STREAM, uri)
+                                    putExtra(Intent.EXTRA_SUBJECT, "AM Player Settings Backup")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(shareIntent, "Save or Share Settings File"))
+                                showExportDialog = false
+                            } catch (e: Exception) {
+                                Toast.makeText(context, "Export error: ${e.message}", Toast.LENGTH_SHORT).show()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = parseHexColor(settings.accentColorHex))
+                    ) {
+                        Text("Export to File")
+                    }
+                    Button(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val clip = ClipData.newPlainText("AM Player Settings", jsonStr)
+                            clipboard.setPrimaryClip(clip)
+                            Toast.makeText(context, "Settings copied to clipboard", Toast.LENGTH_SHORT).show()
+                            showExportDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Text("Copy", color = MaterialTheme.colorScheme.onSurface)
+                    }
                 }
             },
             dismissButton = {

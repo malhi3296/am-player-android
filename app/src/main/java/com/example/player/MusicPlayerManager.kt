@@ -123,10 +123,10 @@ class MusicPlayerManager(private val context: Context) {
             .setKeepPostFor302Redirects(true)
             .setConnectTimeoutMs(25000)
             .setReadTimeoutMs(25000)
-            .setUserAgent("AMPlayer/2.4.3 (Linux; Android 14) ExoPlayerLib/2.19.1")
+            .setUserAgent("AMPlayer/2.4.4 (Linux; Android 14) ExoPlayerLib/2.19.1")
             .setDefaultRequestProperties(
                 mapOf(
-                    "User-Agent" to "AMPlayer/2.4.3 (Linux; Android 14) ExoPlayerLib/2.19.1",
+                    "User-Agent" to "AMPlayer/2.4.4 (Linux; Android 14) ExoPlayerLib/2.19.1",
                     "Icy-MetaData" to "1",
                     "Accept" to "*/*"
                 )

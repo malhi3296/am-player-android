@@ -169,18 +169,6 @@ class IptvRepository(private val context: Context? = null) {
             )
         )
 
-        // 6. RADIO
-        initialFolders.add(
-            IptvPlaylistFolder(
-                id = "folder_radio",
-                name = "Radio",
-                colorHex = UNIFORM_FOLDER_COLOR,
-                iconName = "radio",
-                channels = radioStationsList,
-                isCustom = false
-            )
-        )
-
         _folders.value = initialFolders
         _channels.value = initialFolders.flatMap { it.channels }
         rebuildFavoritesFolder()
@@ -257,7 +245,11 @@ class IptvRepository(private val context: Context? = null) {
     suspend fun importM3uPlaylist(folderName: String, colorHex: String, iconName: String, playlistUrlOrContent: String): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val content = if (playlistUrlOrContent.startsWith("http://", ignoreCase = true) || playlistUrlOrContent.startsWith("https://", ignoreCase = true)) {
-                val req = Request.Builder().url(playlistUrlOrContent.trim()).build()
+                val req = Request.Builder()
+                    .url(playlistUrlOrContent.trim())
+                    .header("User-Agent", "Mozilla/5.0 (Linux; Android 14; IPTV Pro v9.1.25) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+                    .header("Accept", "*/*")
+                    .build()
                 val resp = httpClient.newCall(req).execute()
                 if (!resp.isSuccessful || resp.body == null) {
                     return@withContext Result.failure(Exception("Failed to download playlist (HTTP ${resp.code})"))
@@ -269,7 +261,7 @@ class IptvRepository(private val context: Context? = null) {
 
             val parsed = parseM3u(content, folderName)
             if (parsed.isEmpty()) {
-                // If no M3U tags, check if it's a single stream URL
+                // If no M3U tags, check if it's a single direct stream URL
                 if (playlistUrlOrContent.startsWith("http://") || playlistUrlOrContent.startsWith("https://")) {
                     val singleChan = IptvChannel(
                         id = "stream_${System.currentTimeMillis()}",
@@ -290,7 +282,7 @@ class IptvRepository(private val context: Context? = null) {
                     _channels.value = listOf(singleChan) + _channels.value
                     return@withContext Result.success(1)
                 }
-                return@withContext Result.failure(Exception("No valid stream channels found"))
+                return@withContext Result.failure(Exception("No playable channels found in this playlist"))
             }
 
             val newFolder = IptvPlaylistFolder(
@@ -321,17 +313,31 @@ class IptvRepository(private val context: Context? = null) {
         for (line in lines) {
             val trimmed = line.trim()
             if (trimmed.startsWith("#EXTINF:", ignoreCase = true)) {
-                val groupMatch = Regex("group-title=\"([^\"]+)\"").find(trimmed)
+                val groupMatch = Regex("""group-title="([^"]+)"""").find(trimmed)
+                    ?: Regex("""group-title=([^, ]+)""").find(trimmed)
                 if (groupMatch != null) {
                     currentCategory = groupMatch.groupValues[1]
                 }
-                val logoMatch = Regex("tvg-logo=\"([^\"]+)\"").find(trimmed)
+                val logoMatch = Regex("""tvg-logo="([^"]+)"""").find(trimmed)
+                    ?: Regex("""tvg-logo=([^, ]+)""").find(trimmed)
                 if (logoMatch != null) {
                     currentLogo = logoMatch.groupValues[1]
                 }
+                val nameMatch = Regex("""tvg-name="([^"]+)"""").find(trimmed)
                 val commaIdx = trimmed.lastIndexOf(',')
-                currentName = if (commaIdx != -1) trimmed.substring(commaIdx + 1).trim() else "Channel ${list.size + 1}"
-            } else if (trimmed.startsWith("http://", ignoreCase = true) || trimmed.startsWith("https://", ignoreCase = true)) {
+                currentName = when {
+                    commaIdx != -1 && commaIdx < trimmed.length - 1 -> trimmed.substring(commaIdx + 1).trim()
+                    nameMatch != null -> nameMatch.groupValues[1].trim()
+                    else -> "Channel ${list.size + 1}"
+                }
+            } else if (trimmed.startsWith("#EXTGRP:", ignoreCase = true)) {
+                val grp = trimmed.substringAfter("#EXTGRP:").trim()
+                if (grp.isNotBlank()) currentCategory = grp
+            } else if (trimmed.startsWith("http://", ignoreCase = true) ||
+                trimmed.startsWith("https://", ignoreCase = true) ||
+                trimmed.startsWith("rtmp://", ignoreCase = true) ||
+                trimmed.startsWith("rtsp://", ignoreCase = true)
+            ) {
                 list.add(
                     IptvChannel(
                         id = "m3u_${list.size}_${System.currentTimeMillis()}",

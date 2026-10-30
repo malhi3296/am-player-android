@@ -64,7 +64,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -293,6 +295,8 @@ fun IptvScreen(
 
     // DIALOG: CREATE NEW M3U PLAYLIST FOLDER WITH INTERNET SEARCH & SUGGESTIONS
     if (showAddPlaylistDialog) {
+        val coroutineScope = rememberCoroutineScope()
+        var isScanningM3u by remember { mutableStateOf(false) }
         var newFolderName by remember { mutableStateOf("") }
         var newStreamOrM3uUrl by remember { mutableStateOf("") }
         var internetSearchQuery by remember { mutableStateOf("") }
@@ -421,24 +425,56 @@ fun IptvScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        val iconName = if (newFolderName.contains("radio", ignoreCase = true) || newStreamOrM3uUrl.contains("radio", ignoreCase = true)) "radio" else "tv"
-                        val created = repository.createFolder(
-                            name = newFolderName.ifBlank { "Custom Playlist" },
-                            colorHex = "#4D6BFE",
-                            iconName = iconName,
-                            initialStreamUrl = newStreamOrM3uUrl
-                        )
-                        selectedFolderId = created.id
-                        showAddPlaylistDialog = false
+                        if (newStreamOrM3uUrl.isBlank()) {
+                            Toast.makeText(context, "Please enter an M3U playlist URL", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        val iconName = if (newFolderName.contains("news", ignoreCase = true)) "newspaper"
+                            else if (newFolderName.contains("sport", ignoreCase = true)) "sports"
+                            else "tv"
+                        val folderTitle = newFolderName.ifBlank { "IPTV Playlist" }
+                        isScanningM3u = true
+                        coroutineScope.launch {
+                            val result = repository.importM3uPlaylist(
+                                folderName = folderTitle,
+                                colorHex = "#4D6BFE",
+                                iconName = iconName,
+                                playlistUrlOrContent = newStreamOrM3uUrl.trim()
+                            )
+                            isScanningM3u = false
+                            result.onSuccess { count ->
+                                Toast.makeText(context, "Scanned & added $count channels!", Toast.LENGTH_SHORT).show()
+                                showAddPlaylistDialog = false
+                                val newlyAdded = repository.folders.value.lastOrNull()
+                                if (newlyAdded != null) {
+                                    selectedFolderId = newlyAdded.id
+                                }
+                            }.onFailure { err ->
+                                Toast.makeText(context, err.message ?: "Failed to scan playlist", Toast.LENGTH_LONG).show()
+                            }
+                        }
                     },
+                    enabled = !isScanningM3u,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape = RoundedCornerShape(10.dp)
                 ) {
-                    Text("Add Playlist", color = Color.White, fontWeight = FontWeight.Bold)
+                    if (isScanningM3u) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Scanning Channels...", color = Color.White, fontSize = 12.sp)
+                        }
+                    } else {
+                        Text("Add Playlist", color = Color.White, fontWeight = FontWeight.Bold)
+                    }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAddPlaylistDialog = false }) {
+                TextButton(onClick = { if (!isScanningM3u) showAddPlaylistDialog = false }) {
                     Text("Cancel", color = Color(0xFFA1A1AA))
                 }
             }

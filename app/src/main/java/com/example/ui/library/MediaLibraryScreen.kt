@@ -1,5 +1,9 @@
 package com.example.ui.library
 
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.filled.Dashboard
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -120,6 +124,13 @@ fun MediaLibraryScreen(
     var renameVideoTarget by remember { mutableStateOf<MediaItemEntity?>(null) }
     var renameVideoInput by remember { mutableStateOf("") }
     var deleteVideoConfirm by remember { mutableStateOf<MediaItemEntity?>(null) }
+
+    var renameFolderTarget by remember { mutableStateOf<String?>(null) }
+    var renameFolderInput by remember { mutableStateOf("") }
+    var deleteFolderConfirm by remember { mutableStateOf<String?>(null) }
+    var hideFolderConfirm by remember { mutableStateOf<String?>(null) }
+    var showPinSetupPrompt by remember { mutableStateOf(false) }
+    var showGridSizeDialog by remember { mutableStateOf(false) }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -326,6 +337,20 @@ fun MediaLibraryScreen(
                             )
                         }
 
+                        // Folder Grid Size Selector (Option to change folder size in grid view)
+                        if (uiState.viewMode == ViewMode.GRID && uiState.selectedFolder == null) {
+                            IconButton(
+                                onClick = { showGridSizeDialog = true },
+                                modifier = Modifier.testTag("action_folder_grid_size")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Dashboard,
+                                    contentDescription = "Folder Grid Size",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+
                         // Sort Options
                         IconButton(
                             onClick = { showSortDialog = true },
@@ -432,147 +457,155 @@ fun MediaLibraryScreen(
                 }
             }
 
-            // MAIN CONTENT: Folders View OR Videos Inside Folder View
-            if (uiState.selectedFolder == null) {
-                // ROOT VIEW: Folders
-                if (folders.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 96.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.Folder,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(52.dp)
-                            )
-                            Spacer(modifier = Modifier.height(10.dp))
+            // MAIN CONTENT: Folders View OR Videos Inside Folder View (With Swipe-down Rescan Pull-To-Refresh)
+            @OptIn(ExperimentalMaterial3Api::class)
+            PullToRefreshBox(
+                isRefreshing = uiState.isScanning,
+                onRefresh = { viewModel.rescan() },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                if (uiState.selectedFolder == null) {
+                    // ROOT VIEW: Folders
+                    if (folders.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = 96.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.Folder,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(52.dp)
+                                )
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = if (uiState.searchQuery.isNotBlank()) "No matching folders found" else "No video folders on device",
+                                    fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    } else if (uiState.viewMode == ViewMode.GRID) {
+                        // Folder Grid: respects chosen folderGridColumns (2, 3, or 4)
+                        val folderCols = if (isLandscape) uiState.folderGridColumns * 2 else uiState.folderGridColumns
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(folderCols),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                            horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 10.dp else 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (isLandscape) 12.dp else 16.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("sa_folder_grid")
+                        ) {
+                            items(folders, key = { it.name }) { folder ->
+                                SaFolderGridItem(
+                                    folder = folder,
+                                    isLandscape = isLandscape,
+                                    isDarkMode = isDarkMode,
+                                    onClick = { viewModel.setSelectedFolder(folder.name) },
+                                    onLongClick = { contextMenuFolder = folder.name }
+                                )
+                            }
+                        }
+                    } else {
+                        // Folder List View
+                        LazyColumn(
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("sa_folder_list")
+                        ) {
+                            items(folders, key = { it.name }) { folder ->
+                                SaFolderListItem(
+                                    folder = folder,
+                                    isDarkMode = isDarkMode,
+                                    onClick = { viewModel.setSelectedFolder(folder.name) },
+                                    onLongClick = { contextMenuFolder = folder.name }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // INSIDE FOLDER: Videos (Respects Grid or List view mode!)
+                    if (filteredMedia.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(bottom = 96.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
-                                text = if (uiState.searchQuery.isNotBlank()) "No matching folders found" else "No video folders on device",
+                                text = "No videos found in this folder",
                                 fontSize = 14.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                    }
-                } else if (uiState.viewMode == ViewMode.GRID) {
-                    // Folder Grid: 3 columns portrait, 6 columns landscape
-                    LazyVerticalGrid(
-                        columns = if (isLandscape) GridCells.Fixed(6) else GridCells.Fixed(3),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                        horizontalArrangement = Arrangement.spacedBy(if (isLandscape) 10.dp else 14.dp),
-                        verticalArrangement = Arrangement.spacedBy(if (isLandscape) 12.dp else 16.dp),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .testTag("sa_folder_grid")
-                    ) {
-                        items(folders, key = { it.name }) { folder ->
-                            SaFolderGridItem(
-                                folder = folder,
-                                isLandscape = isLandscape,
-                                isDarkMode = isDarkMode,
-                                onClick = { viewModel.setSelectedFolder(folder.name) },
-                                onLongClick = { contextMenuFolder = folder.name }
-                            )
-                        }
-                    }
-                } else {
-                    // Folder List View
-                    LazyColumn(
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .testTag("sa_folder_list")
-                    ) {
-                        items(folders, key = { it.name }) { folder ->
-                            SaFolderListItem(
-                                folder = folder,
-                                isDarkMode = isDarkMode,
-                                onClick = { viewModel.setSelectedFolder(folder.name) },
-                                onLongClick = { contextMenuFolder = folder.name }
-                            )
-                        }
-                    }
-                }
-            } else {
-                // INSIDE FOLDER: Videos (Respects Grid or List view mode!)
-                if (filteredMedia.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = 96.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No videos found in this folder",
-                            fontSize = 14.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else if (uiState.viewMode == ViewMode.GRID) {
-                    // Videos Grid View
-                    LazyVerticalGrid(
-                        columns = if (isLandscape) GridCells.Fixed(4) else GridCells.Fixed(2),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .testTag("folder_videos_grid")
-                    ) {
-                        items(filteredMedia, key = { it.id }) { item ->
-                            val isSelected = item.id in uiState.selectedVideoIds
-                            SaVideoGridItem(
-                                item = item,
-                                isSelectionMode = uiState.isSelectionMode,
-                                isSelected = isSelected,
-                                isDarkMode = isDarkMode,
-                                showThumbnails = showVideoThumbnails,
-                                onClick = {
-                                    if (uiState.isSelectionMode) {
-                                        viewModel.toggleVideoSelection(item.id)
-                                    } else {
-                                        viewModel.recordVideoClick(item.id)
-                                        onPlayMedia(item.id)
+                    } else if (uiState.viewMode == ViewMode.GRID) {
+                        // Videos Grid View
+                        LazyVerticalGrid(
+                            columns = if (isLandscape) GridCells.Fixed(4) else GridCells.Fixed(2),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("folder_videos_grid")
+                        ) {
+                            items(filteredMedia, key = { it.id }) { item ->
+                                val isSelected = item.id in uiState.selectedVideoIds
+                                SaVideoGridItem(
+                                    item = item,
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isSelected = isSelected,
+                                    isDarkMode = isDarkMode,
+                                    showThumbnails = showVideoThumbnails,
+                                    onClick = {
+                                        if (uiState.isSelectionMode) {
+                                            viewModel.toggleVideoSelection(item.id)
+                                        } else {
+                                            viewModel.recordVideoClick(item.id)
+                                            onPlayMedia(item.id)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        contextMenuVideo = item
                                     }
-                                },
-                                onLongClick = {
-                                    contextMenuVideo = item
-                                }
-                            )
+                                )
+                            }
                         }
-                    }
-                } else {
-                    // Videos List View
-                    LazyColumn(
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .testTag("folder_videos_list")
-                    ) {
-                        items(filteredMedia, key = { it.id }) { item ->
-                            val isSelected = item.id in uiState.selectedVideoIds
-                            SaVideoListItem(
-                                item = item,
-                                isSelectionMode = uiState.isSelectionMode,
-                                isSelected = isSelected,
-                                showThumbnails = showVideoThumbnails,
-                                onClick = {
-                                    if (uiState.isSelectionMode) {
-                                        viewModel.toggleVideoSelection(item.id)
-                                    } else {
-                                        viewModel.recordVideoClick(item.id)
-                                        onPlayMedia(item.id)
+                    } else {
+                        // Videos List View
+                        LazyColumn(
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 96.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .testTag("folder_videos_list")
+                        ) {
+                            items(filteredMedia, key = { it.id }) { item ->
+                                val isSelected = item.id in uiState.selectedVideoIds
+                                SaVideoListItem(
+                                    item = item,
+                                    isSelectionMode = uiState.isSelectionMode,
+                                    isSelected = isSelected,
+                                    showThumbnails = showVideoThumbnails,
+                                    onClick = {
+                                        if (uiState.isSelectionMode) {
+                                            viewModel.toggleVideoSelection(item.id)
+                                        } else {
+                                            viewModel.recordVideoClick(item.id)
+                                            onPlayMedia(item.id)
+                                        }
+                                    },
+                                    onLongClick = {
+                                        contextMenuVideo = item
                                     }
-                                },
-                                onLongClick = {
-                                    contextMenuVideo = item
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }
@@ -757,16 +790,21 @@ fun MediaLibraryScreen(
                         Text("Rename Video", fontSize = 14.sp)
                     }
 
-                    // 3. Hide Video (From entire phone)
+                    // 3. Hide Video (Move to Vault)
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
                                 contextMenuVideo = null
-                                viewModel.hideVideo(item) { success ->
-                                    val msg = if (success) "Video hidden from phone & secured in Vault" else "Video hidden"
-                                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                                }
+                                viewModel.hideVideo(
+                                    item = item,
+                                    onRequirePin = {
+                                        showPinSetupPrompt = true
+                                    },
+                                    onResult = {
+                                        Toast.makeText(context, "Video secured in Secret Vault", Toast.LENGTH_SHORT).show()
+                                    }
+                                )
                             }
                             .padding(vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -774,8 +812,8 @@ fun MediaLibraryScreen(
                         Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color(0xFFFF9800))
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
-                            Text("Hide Video (From Phone)", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFFF9800))
-                            Text("Hides from all gallery apps; unlock in Vault", fontSize = 11.sp, color = Color.Gray)
+                            Text("Hide Video (Move to Vault)", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFFF9800))
+                            Text("Protected with PIN; view anytime in Vault", fontSize = 11.sp, color = Color.Gray)
                         }
                     }
 
@@ -883,13 +921,35 @@ fun MediaLibraryScreen(
         )
     }
 
-    // Folder Context Menu Dialog
+    // Folder Context Menu Dialog (Requirement 1 & 2)
     contextMenuFolder?.let { folderName ->
+        val folderVideos = allRawMedia.filter { it.folderName == folderName }
+        val totalBytes = folderVideos.sumOf { it.sizeBytes }
+        val sizeFormatted = when {
+            totalBytes >= 1024 * 1024 * 1024 -> "%.2f GB".format(totalBytes / (1024.0 * 1024.0 * 1024.0))
+            totalBytes >= 1024 * 1024 -> "%.1f MB".format(totalBytes / (1024.0 * 1024.0))
+            else -> "${totalBytes / 1024} KB"
+        }
+
         AlertDialog(
             onDismissRequest = { contextMenuFolder = null },
-            title = { Text(folderName, fontWeight = FontWeight.Bold) },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(folderName, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "${folderVideos.size} videos • $sizeFormatted",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    // 1. Open Folder
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -904,13 +964,266 @@ fun MediaLibraryScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text("Open Folder", fontSize = 14.sp)
                     }
-                    val folderVideos = allRawMedia.filter { it.folderName == folderName }
-                    Text("${folderVideos.size} videos in this folder", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(top = 8.dp))
+
+                    // 2. Play All Videos in Folder
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                contextMenuFolder = null
+                                val vids = folderVideos
+                                if (vids.isNotEmpty()) {
+                                    viewModel.recordVideoClick(vids.first().id)
+                                    onPlayMedia(vids.first().uri)
+                                }
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Play All Videos", fontSize = 14.sp)
+                    }
+
+                    // 3. Rename Folder
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                renameFolderTarget = folderName
+                                renameFolderInput = folderName
+                                contextMenuFolder = null
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.DriveFileRenameOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Rename Folder", fontSize = 14.sp)
+                    }
+
+                    // 4. Hide All Videos to Vault
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                hideFolderConfirm = folderName
+                                contextMenuFolder = null
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color(0xFFFF9800))
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text("Hide Videos (Move to Vault)", fontSize = 14.sp, color = Color(0xFFFF9800), fontWeight = FontWeight.SemiBold)
+                            Text("Secures all videos in this folder with PIN", fontSize = 11.sp, color = Color.Gray)
+                        }
+                    }
+
+                    // 5. Delete All Videos in Folder
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                deleteFolderConfirm = folderName
+                                contextMenuFolder = null
+                            }
+                            .padding(vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, tint = DangerRed)
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text("Delete Folder Videos", fontSize = 14.sp, color = DangerRed)
+                    }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { contextMenuFolder = null }) {
                     Text("Close")
+                }
+            }
+        )
+    }
+
+    // Rename Folder Dialog
+    renameFolderTarget?.let { target ->
+        AlertDialog(
+            onDismissRequest = { renameFolderTarget = null },
+            title = { Text("Rename Folder", fontWeight = FontWeight.Bold) },
+            text = {
+                OutlinedTextField(
+                    value = renameFolderInput,
+                    onValueChange = { renameFolderInput = it },
+                    label = { Text("New Folder Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(onClick = {
+                    if (renameFolderInput.isNotBlank()) {
+                        viewModel.renameFolder(target, renameFolderInput)
+                    }
+                    renameFolderTarget = null
+                }) {
+                    Text("Rename")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameFolderTarget = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Delete Folder Confirmation Dialog
+    deleteFolderConfirm?.let { folderName ->
+        val count = allRawMedia.count { it.folderName == folderName }
+        AlertDialog(
+            onDismissRequest = { deleteFolderConfirm = null },
+            title = { Text("Delete Folder Videos?", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete all $count video(s) in '$folderName'? This action cannot be undone.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.deleteFolderVideos(folderName)
+                        deleteFolderConfirm = null
+                        Toast.makeText(context, "Deleted videos from $folderName", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = DangerRed)
+                ) {
+                    Text("Delete All", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteFolderConfirm = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Hide Folder to Vault Confirmation Dialog
+    hideFolderConfirm?.let { folderName ->
+        val count = allRawMedia.count { it.folderName == folderName }
+        AlertDialog(
+            onDismissRequest = { hideFolderConfirm = null },
+            title = { Text("Hide Folder to Vault?", fontWeight = FontWeight.Bold) },
+            text = { Text("Move all $count video(s) from '$folderName' to your Secret Vault? They will be protected by your PIN.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        hideFolderConfirm = null
+                        viewModel.hideFolderVideos(
+                            folderName = folderName,
+                            onRequirePin = {
+                                showPinSetupPrompt = true
+                            },
+                            onDone = { movedCount ->
+                                Toast.makeText(context, "Moved $movedCount video(s) to Secret Vault", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+                ) {
+                    Text("Hide to Vault", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { hideFolderConfirm = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // PIN Setup Prompt Dialog (Requirement 2)
+    if (showPinSetupPrompt) {
+        AlertDialog(
+            onDismissRequest = { showPinSetupPrompt = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Secret Vault PIN Required", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("To protect your hidden videos, you must first create a 4-digit PIN for your Secret Vault. Would you like to set up your PIN now?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showPinSetupPrompt = false
+                        showSecretVaultDialog = true
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text("Set Up PIN Now", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showPinSetupPrompt = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Folder Grid Size Dialog (Requirement 10)
+    if (showGridSizeDialog) {
+        AlertDialog(
+            onDismissRequest = { showGridSizeDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Dashboard, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Folder Grid Size", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf(
+                        2 to "Large (2 Columns)",
+                        3 to "Medium (3 Columns - Default)",
+                        4 to "Small (4 Columns)"
+                    ).forEach { (cols, label) ->
+                        val isSelected = uiState.folderGridColumns == cols
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    viewModel.setFolderGridColumns(cols)
+                                    showGridSizeDialog = false
+                                }
+                                .padding(vertical = 8.dp, horizontal = 4.dp)
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    viewModel.setFolderGridColumns(cols)
+                                    showGridSizeDialog = false
+                                },
+                                colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = label,
+                                fontSize = 14.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showGridSizeDialog = false }) {
+                    Text("Close", color = MaterialTheme.colorScheme.primary)
                 }
             }
         )

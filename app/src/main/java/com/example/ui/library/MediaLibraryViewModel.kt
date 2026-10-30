@@ -46,7 +46,8 @@ data class LibraryUiState(
     val sortOption: SortOption = SortOption.NAME_ASC,
     val hasPermission: Boolean = false,
     val isSelectionMode: Boolean = false,
-    val selectedVideoIds: Set<String> = emptySet()
+    val selectedVideoIds: Set<String> = emptySet(),
+    val folderGridColumns: Int = 3
 )
 
 class MediaLibraryViewModel(application: Application) : AndroidViewModel(application) {
@@ -245,7 +246,47 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
         _uiState.update { it.copy(selectedVideoIds = ids.toSet(), isSelectionMode = true) }
     }
 
-    
+    fun setFolderGridColumns(cols: Int) {
+        _uiState.update { it.copy(folderGridColumns = cols.coerceIn(2, 4)) }
+    }
+
+    fun renameFolder(oldName: String, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty() || trimmed == oldName) return
+        viewModelScope.launch {
+            val videos = allRawMedia.value.filter { it.folderName == oldName }
+            for (v in videos) {
+                mediaRepo.addMediaItem(v.copy(folderName = trimmed))
+            }
+            rescan()
+        }
+    }
+
+    fun deleteFolderVideos(folderName: String) {
+        viewModelScope.launch {
+            val ids = allRawMedia.value.filter { it.folderName == folderName }.map { it.id }
+            if (ids.isNotEmpty()) {
+                mediaRepo.deleteMediaItems(ids)
+                rescan()
+            }
+        }
+    }
+
+    fun hideFolderVideos(folderName: String, onRequirePin: () -> Unit, onDone: (Int) -> Unit) {
+        if (!vaultRepository.isVaultConfigured.value) {
+            onRequirePin()
+            return
+        }
+        viewModelScope.launch {
+            val videos = allMedia.value.filter { it.folderName == folderName }
+            for (v in videos) {
+                vaultRepository.hideVideo(v.id, folderName)
+            }
+            rescan()
+            onDone(videos.size)
+        }
+    }
+
     fun renameVideo(item: MediaItemEntity, newTitle: String) {
         viewModelScope.launch {
             mediaRepo.renameMediaItem(item.id, newTitle)
@@ -253,11 +294,15 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
         }
     }
 
-    fun hideVideo(item: MediaItemEntity, onResult: (Boolean) -> Unit) {
+    fun hideVideo(item: MediaItemEntity, onRequirePin: () -> Unit, onResult: (Boolean) -> Unit) {
+        if (!vaultRepository.isVaultConfigured.value) {
+            onRequirePin()
+            return
+        }
         viewModelScope.launch {
-            val success = mediaRepo.hideMediaItem(item)
+            vaultRepository.hideVideo(item.id, item.folderName)
             rescan()
-            onResult(success)
+            onResult(true)
         }
     }
 

@@ -220,6 +220,19 @@ fun PlayerScreen(
                     AspectRatioMode.RATIO_4_3 -> AspectRatioFrameLayout.RESIZE_MODE_FIXED_HEIGHT
                     AspectRatioMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
                 }
+                // Style subtitles with transparent background and black drop shadow for contrast (Requirement 9)
+                playerView.subtitleView?.apply {
+                    val style = androidx.media3.ui.CaptionStyleCompat(
+                        android.graphics.Color.WHITE,
+                        android.graphics.Color.TRANSPARENT,
+                        android.graphics.Color.TRANSPARENT,
+                        androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_DROP_SHADOW,
+                        android.graphics.Color.BLACK,
+                        null
+                    )
+                    setStyle(style)
+                    setFractionalTextSize(androidx.media3.ui.SubtitleView.DEFAULT_TEXT_SIZE_FRACTION * (uiState.subtitleFontSizeSp / 18f))
+                }
             },
             modifier = Modifier
                 .fillMaxSize()
