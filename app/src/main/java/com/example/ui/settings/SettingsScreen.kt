@@ -105,6 +105,8 @@ fun SettingsScreen(
 
     // Dialog visibility states
     var showAccentColorDialog by remember { mutableStateOf(false) }
+    var showDarkBgDialog by remember { mutableStateOf(false) }
+    var showLightBgDialog by remember { mutableStateOf(false) }
     var showSeekDurationDialog by remember { mutableStateOf(false) }
     var showSeekbarStyleDialog by remember { mutableStateOf(false) }
     var showMpvProfileDialog by remember { mutableStateOf(false) }
@@ -218,7 +220,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Version 2.4.4",
+                        text = "Version 2.4.5",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -262,6 +264,48 @@ fun SettingsScreen(
                     )
                 },
                 onClick = { showAccentColorDialog = true }
+            )
+
+            SettingClickableItem(
+                title = "Dark Background Style",
+                subtitle = "Active: ${settings.darkBgTheme}",
+                trailing = {
+                    val darkColor = when (settings.darkBgTheme) {
+                        "Midnight Navy" -> Color(0xFF0A0E1A)
+                        "Deep Charcoal" -> Color(0xFF121216)
+                        "Cyber Slate" -> Color(0xFF161922)
+                        else -> Color(0xFF000000)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(darkColor)
+                            .border(1.5.dp, parseHexColor(settings.accentColorHex), CircleShape)
+                    )
+                },
+                onClick = { showDarkBgDialog = true }
+            )
+
+            SettingClickableItem(
+                title = "Light Background Style",
+                subtitle = "Active: ${settings.lightBgTheme}",
+                trailing = {
+                    val lightColor = when (settings.lightBgTheme) {
+                        "Pure White" -> Color(0xFFFFFFFF)
+                        "Warm Cream" -> Color(0xFFFDFBF7)
+                        "Soft Silver" -> Color(0xFFEDEDF2)
+                        else -> Color(0xFFF6F8FC)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(lightColor)
+                            .border(1.5.dp, parseHexColor(settings.accentColorHex), CircleShape)
+                    )
+                },
+                onClick = { showLightBgDialog = true }
             )
 
             // Logo Dark Mode Opacity (Item 19a)
@@ -686,6 +730,158 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showAccentColorDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    // DIALOG: DARK BACKGROUND STYLE (Item 7)
+    if (showDarkBgDialog) {
+        val darkThemes = listOf(
+            Triple("OLED Black", Color(0xFF000000), "Pitch Black • AMOLED Power Saver (Matches sa.jpg)"),
+            Triple("Midnight Navy", Color(0xFF0A0E1A), "Deep Night Blue • Subtle & Rich"),
+            Triple("Deep Charcoal", Color(0xFF121216), "Modern Charcoal • Soft Dark Finish"),
+            Triple("Cyber Slate", Color(0xFF161922), "Futuristic Slate • Tech Studio Vibe")
+        )
+        AlertDialog(
+            onDismissRequest = { showDarkBgDialog = false },
+            title = { Text("Dark Background Style", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Select your preferred dark theme tone:", fontSize = 12.sp, color = Color(0xFFA1A1AA))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    darkThemes.forEach { (name, color, desc) ->
+                        val isSelected = settings.darkBgTheme == name
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = color,
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (isSelected) 2.dp else 1.dp,
+                                if (isSelected) parseHexColor(settings.accentColorHex) else Color(0xFF33333E)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    settingsRepository.setDarkBgTheme(name)
+                                    showDarkBgDialog = false
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .border(1.5.dp, if (isSelected) Color.White else Color(0xFF555562), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = name,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = desc,
+                                        fontSize = 10.sp,
+                                        color = Color(0xFFA1A1AA)
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = "Selected",
+                                        tint = parseHexColor(settings.accentColorHex),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showDarkBgDialog = false }) { Text("Close") }
+            }
+        )
+    }
+
+    // DIALOG: LIGHT BACKGROUND STYLE (Item 7)
+    if (showLightBgDialog) {
+        val lightThemes = listOf(
+            Triple("Cool Gray", Color(0xFFF6F8FC), "Balanced Soft Gray • Default Clean UI"),
+            Triple("Pure White", Color(0xFFFFFFFF), "Ultra Clean White • Vibrant & Bright"),
+            Triple("Warm Cream", Color(0xFFFDFBF7), "Gentle Warm Cream • Eye Comfort"),
+            Triple("Soft Silver", Color(0xFFEDEDF2), "Refined Silver • Metallic Tint")
+        )
+        AlertDialog(
+            onDismissRequest = { showLightBgDialog = false },
+            title = { Text("Light Background Style", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Select your preferred light theme tone:", fontSize = 12.sp, color = Color(0xFFA1A1AA))
+                    Spacer(modifier = Modifier.height(6.dp))
+                    lightThemes.forEach { (name, color, desc) ->
+                        val isSelected = settings.lightBgTheme == name
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = color,
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (isSelected) 2.dp else 1.dp,
+                                if (isSelected) parseHexColor(settings.accentColorHex) else Color(0xFFD1D5DB)
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    settingsRepository.setLightBgTheme(name)
+                                    showLightBgDialog = false
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(color)
+                                        .border(1.5.dp, if (isSelected) Color(0xFF4D6BFE) else Color(0xFF9CA3AF), CircleShape)
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = name,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = Color(0xFF101217)
+                                    )
+                                    Text(
+                                        text = desc,
+                                        fontSize = 10.sp,
+                                        color = Color(0xFF4B5563)
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Favorite,
+                                        contentDescription = "Selected",
+                                        tint = parseHexColor(settings.accentColorHex),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showLightBgDialog = false }) { Text("Close") }
             }
         )
     }

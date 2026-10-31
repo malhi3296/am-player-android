@@ -299,16 +299,30 @@ fun MusicScreen(
 
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier.clickable { onRescan() }
+                            color = if (viewMode == "Radio") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.clickable {
+                                viewMode = if (viewMode == "Radio") "Songs" else "Radio"
+                                selectedRadioFolder = null
+                            }
                         ) {
-                            Text(
-                                text = "Scan",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Radio,
+                                    contentDescription = "Radio",
+                                    tint = if (viewMode == "Radio") Color.White else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Radio",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (viewMode == "Radio") Color.White else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
                 }

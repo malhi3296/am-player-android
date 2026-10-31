@@ -21,6 +21,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -735,6 +736,12 @@ fun MediaLibraryScreen(
                     viewModel.recordVideoClick(videoId)
                     onPlayMedia(videoId)
                 },
+                onUnhideMedia = { videoId ->
+                    viewModel.unhideVideo(videoId)
+                },
+                onLockMedia = { video, destFolder ->
+                    viewModel.hideVideoToVault(video, destFolder)
+                },
                 onDismiss = { showSecretVaultDialog = false }
             )
         }
@@ -1251,13 +1258,21 @@ private fun SaFolderGridItem(
         val iconSize = if (isLandscape) 26.dp else 38.dp
         val cornerRadius = if (isLandscape) 12.dp else 16.dp
 
-        // Transparent / clean card box
+        // Subtle background behind folder card (User Requirement 5)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(RoundedCornerShape(cornerRadius))
-                .background(if (isDarkMode) Color.Transparent else Color.White),
+                .background(
+                    if (isDarkMode) Color.White.copy(alpha = 0.05f)
+                    else Color(0xFFF4F5F8)
+                )
+                .border(
+                    width = 1.dp,
+                    color = if (isDarkMode) Color.White.copy(alpha = 0.08f) else Color(0xFFE4E4E8),
+                    shape = RoundedCornerShape(cornerRadius)
+                ),
             contentAlignment = Alignment.Center
         ) {
             // Folder icon in accent color

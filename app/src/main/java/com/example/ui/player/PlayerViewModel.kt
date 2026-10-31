@@ -14,6 +14,7 @@ import com.example.data.subtitles.OpenSubtitlesHasher
 import com.example.player.AspectRatioMode
 import com.example.player.DecoderMode
 import com.example.player.ExoPlayerManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -308,36 +309,41 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             if (!isLive) {
-                // Compute or retrieve video hash for automatic subtitle discovery
-                videoHash = try {
-                    OpenSubtitlesHasher.computeHashFromUri(
-                        getApplication(),
-                        Uri.parse(item.uri),
-                        item.title
-                    )
-                } catch (e: Exception) {
-                    OpenSubtitlesHasher.generateFallbackHash(item.title)
-                }
-
-                // Check cached subtitles in Room
-                val cached = subtitleRepo.getCachedSubtitles(videoHash)
-                _uiState.update { it.copy(cachedSubtitles = cached) }
-
-                val initialSub = cached.firstOrNull()?.let { File(it.filePath) }
-                if (initialSub != null && initialSub.exists()) {
-                    activeSubtitleFile = initialSub
-                    _uiState.update { it.copy(currentSubtitleTitle = cached.first().language) }
-                }
-
-                // Start playback from saved resume position
+                // Start playback INSTANTLY without waiting for subtitle hashing (Requirement 8)
                 val resumePos = if (item.completed) 0L else item.playbackPositionMs
-                playerManager.prepareMedia(item.uri, resumePos, activeSubtitleFile)
+                playerManager.prepareMedia(item.uri, resumePos, null)
 
-                // Trigger automated background subtitle search
-                if (activeSubtitleFile == null) {
-                    autoSearchSubtitles(videoHash, item.title)
+                // Asynchronously compute hash and load cached/online subtitles in background
+                viewModelScope.launch(Dispatchers.IO) {
+                    videoHash = try {
+                        OpenSubtitlesHasher.computeHashFromUri(
+                            getApplication(),
+                            Uri.parse(item.uri),
+                            item.title
+                        )
+                    } catch (e: Exception) {
+                        OpenSubtitlesHasher.generateFallbackHash(item.title)
+                    }
+
+                    // Check cached subtitles in Room
+                    val cached = subtitleRepo.getCachedSubtitles(videoHash)
+                    _uiState.update { it.copy(cachedSubtitles = cached) }
+
+                    val initialSub = cached.firstOrNull()?.let { File(it.filePath) }
+                    if (initialSub != null && initialSub.exists()) {
+                        activeSubtitleFile = initialSub
+                        _uiState.update { it.copy(currentSubtitleTitle = cached.first().language) }
+                        playerManager.attachSubtitle(initialSub)
+                    } else {
+                        // Trigger automated background subtitle search
+                        autoSearchSubtitles(videoHash, item.title)
+                    }
                 }
             } else {
+                // Live IPTV Stream: check network connectivity (Requirement 3)
+                if (!com.example.util.NetworkUtils.isOnline(getApplication())) {
+                    _uiState.update { it.copy(toastMessage = "No internet connection. Please check your data or Wi-Fi.") }
+                }
                 // Live IPTV Stream: Start directly without seeking or subtitle hashing
                 playerManager.prepareMedia(item.uri, 0L, null)
             }

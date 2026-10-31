@@ -32,7 +32,9 @@ data class AppSettingsState(
     val subtitleTextColorHex: String = "#FFFFFF",
     val subtitleBackgroundColorHex: String = "#80000000",
     val subtitleProvidersEnabled: Boolean = true,
-    val fileBrowserShowHidden: Boolean = false
+    val fileBrowserShowHidden: Boolean = false,
+    val darkBgTheme: String = "OLED Black",
+    val lightBgTheme: String = "Cool Gray"
 )
 
 class SettingsRepository(private val context: Context) {
@@ -66,7 +68,9 @@ class SettingsRepository(private val context: Context) {
             subtitleTextColorHex = prefs.getString(KEY_SUB_TEXT_COLOR, "#FFFFFF") ?: "#FFFFFF",
             subtitleBackgroundColorHex = prefs.getString(KEY_SUB_BG_COLOR, "#80000000") ?: "#80000000",
             subtitleProvidersEnabled = prefs.getBoolean(KEY_SUB_PROVIDERS, true),
-            fileBrowserShowHidden = prefs.getBoolean(KEY_BROWSER_SHOW_HIDDEN, false)
+            fileBrowserShowHidden = prefs.getBoolean(KEY_BROWSER_SHOW_HIDDEN, false),
+            darkBgTheme = prefs.getString(KEY_DARK_BG_THEME, "OLED Black") ?: "OLED Black",
+            lightBgTheme = prefs.getString(KEY_LIGHT_BG_THEME, "Cool Gray") ?: "Cool Gray"
         )
     }
 
@@ -230,6 +234,8 @@ class SettingsRepository(private val context: Context) {
         json.put("subtitleTextColorHex", s.subtitleTextColorHex)
         json.put("subtitleBackgroundColorHex", s.subtitleBackgroundColorHex)
         json.put("fileBrowserShowHidden", s.fileBrowserShowHidden)
+        json.put("darkBgTheme", s.darkBgTheme)
+        json.put("lightBgTheme", s.lightBgTheme)
         return json.toString(2)
     }
 
@@ -247,10 +253,22 @@ class SettingsRepository(private val context: Context) {
             if (json.has("subtitleFontSize")) setSubtitleFontSize(json.getInt("subtitleFontSize"))
             if (json.has("subtitleTextColorHex")) setSubtitleTextColor(json.getString("subtitleTextColorHex"))
             if (json.has("fileBrowserShowHidden")) setFileBrowserShowHidden(json.getBoolean("fileBrowserShowHidden"))
+            if (json.has("darkBgTheme")) setDarkBgTheme(json.getString("darkBgTheme"))
+            if (json.has("lightBgTheme")) setLightBgTheme(json.getString("lightBgTheme"))
             true
         } catch (_: Exception) {
             false
         }
+    }
+
+    fun setDarkBgTheme(theme: String) {
+        prefs.edit().putString(KEY_DARK_BG_THEME, theme).apply()
+        _settings.value = _settings.value.copy(darkBgTheme = theme)
+    }
+
+    fun setLightBgTheme(theme: String) {
+        prefs.edit().putString(KEY_LIGHT_BG_THEME, theme).apply()
+        _settings.value = _settings.value.copy(lightBgTheme = theme)
     }
 
     companion object {
@@ -279,6 +297,8 @@ class SettingsRepository(private val context: Context) {
         private const val KEY_SUB_BG_COLOR = "pref_sub_bg_color"
         private const val KEY_SUB_PROVIDERS = "pref_sub_providers"
         private const val KEY_BROWSER_SHOW_HIDDEN = "pref_browser_show_hidden"
+        private const val KEY_DARK_BG_THEME = "pref_dark_bg_theme"
+        private const val KEY_LIGHT_BG_THEME = "pref_light_bg_theme"
     }
 
     fun setShowVideoThumbnails(enabled: Boolean) {

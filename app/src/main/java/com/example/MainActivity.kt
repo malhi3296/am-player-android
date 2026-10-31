@@ -101,7 +101,9 @@ class MainActivity : ComponentActivity() {
 
             AMPlayerTheme(
                 darkTheme = settings.isDarkMode,
-                accentColor = accentColor
+                accentColor = accentColor,
+                darkBgTheme = settings.darkBgTheme,
+                lightBgTheme = settings.lightBgTheme
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     MainHomeScreen(

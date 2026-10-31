@@ -280,6 +280,7 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
         viewModelScope.launch {
             val videos = allMedia.value.filter { it.folderName == folderName }
             for (v in videos) {
+                mediaRepo.hideMediaItem(v)
                 vaultRepository.hideVideo(v.id, folderName)
             }
             rescan()
@@ -300,9 +301,29 @@ class MediaLibraryViewModel(application: Application) : AndroidViewModel(applica
             return
         }
         viewModelScope.launch {
+            mediaRepo.hideMediaItem(item)
             vaultRepository.hideVideo(item.id, item.folderName)
             rescan()
             onResult(true)
+        }
+    }
+
+    fun hideVideoToVault(item: MediaItemEntity, vaultFolder: String) {
+        viewModelScope.launch {
+            mediaRepo.hideMediaItem(item)
+            vaultRepository.hideVideo(item.id, vaultFolder)
+            rescan()
+        }
+    }
+
+    fun unhideVideo(videoId: String) {
+        viewModelScope.launch {
+            val item = mediaRepo.getMediaById(videoId)
+            if (item != null) {
+                mediaRepo.unhideMediaItem(item)
+            }
+            vaultRepository.unhideVideo(videoId)
+            rescan()
         }
     }
 

@@ -39,13 +39,13 @@ class ExoPlayerManager(private val context: Context) {
             .setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
             .setEnableDecoderFallback(true)
 
-        // Custom low-latency buffer load control for instantaneous seeking without black screen
+        // Custom ultra low-latency buffer load control for instant playback startup (Requirement 8)
         val loadControl = DefaultLoadControl.Builder()
             .setBufferDurationsMs(
-                15000, // Min buffer
-                50000, // Max buffer
-                500,   // Buffer for playback start
-                1000   // Buffer for playback after rebuffer
+                2500,  // Min buffer
+                15000, // Max buffer
+                250,   // Buffer for playback start (instantaneous)
+                500    // Buffer for playback after rebuffer
             )
             .setPrioritizeTimeOverSizeThresholds(true)
             .build()
@@ -166,6 +166,7 @@ class ExoPlayerManager(private val context: Context) {
         }
         player.prepare()
         player.playWhenReady = true
+        player.play()
     }
 
     fun attachSubtitle(subtitleFile: File) {

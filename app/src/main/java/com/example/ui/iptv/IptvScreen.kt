@@ -17,8 +17,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -284,7 +287,13 @@ fun IptvScreen(
                         channel = channel,
                         isRadio = isRadio,
                         isFav = isFav,
-                        onPlay = { onPlayChannel(channel.streamUrl) },
+                        onPlay = { 
+                            if (!com.example.util.NetworkUtils.isOnline(context)) {
+                                Toast.makeText(context, "No internet connection. Please check your data or Wi-Fi.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                onPlayChannel(channel.streamUrl)
+                            }
+                        },
                         onToggleFav = { repository.toggleFavorite(channel.id) },
                         onLongClick = { contextMenuChannel = channel }
                     )
@@ -300,13 +309,14 @@ fun IptvScreen(
         var newFolderName by remember { mutableStateOf("") }
         var newStreamOrM3uUrl by remember { mutableStateOf("") }
         var internetSearchQuery by remember { mutableStateOf("") }
+        var selectedGroup by remember { mutableStateOf("All") }
         val suggestedPlaylists = remember { repository.getSuggestedOnlinePlaylists() }
-        val filteredSuggestions = remember(internetSearchQuery) {
-            if (internetSearchQuery.isBlank()) suggestedPlaylists else {
-                suggestedPlaylists.filter {
-                    it.title.contains(internetSearchQuery, ignoreCase = true) ||
-                            it.description.contains(internetSearchQuery, ignoreCase = true)
-                }
+        val filteredSuggestions = remember(internetSearchQuery, selectedGroup) {
+            suggestedPlaylists.filter { item ->
+                (selectedGroup == "All" || item.group.equals(selectedGroup, ignoreCase = true)) &&
+                (internetSearchQuery.isBlank() ||
+                    item.title.contains(internetSearchQuery, ignoreCase = true) ||
+                    item.description.contains(internetSearchQuery, ignoreCase = true))
             }
         }
 
@@ -332,11 +342,14 @@ fun IptvScreen(
                     OutlinedTextField(
                         value = newFolderName,
                         onValueChange = { newFolderName = it },
-                        placeholder = { Text("Playlist Name", fontSize = 13.sp) },
+                        placeholder = { Text("Playlist Name", fontSize = 13.sp, color = Color.Gray) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color(0xFF3F3F46)
+                            unfocusedBorderColor = Color(0xFF3F3F46),
+                            cursorColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -345,11 +358,14 @@ fun IptvScreen(
                     OutlinedTextField(
                         value = newStreamOrM3uUrl,
                         onValueChange = { newStreamOrM3uUrl = it },
-                        placeholder = { Text("https://example.com/playlist.m3u", fontSize = 13.sp) },
+                        placeholder = { Text("https://example.com/playlist.m3u", fontSize = 13.sp, color = Color.Gray) },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color(0xFF3F3F46)
+                            unfocusedBorderColor = Color(0xFF3F3F46),
+                            cursorColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -358,22 +374,56 @@ fun IptvScreen(
                     Spacer(modifier = Modifier.height(14.dp))
 
                     Text(
-                        text = "Browse Online Playlists (Tap to auto-fill):",
+                        text = "Browse Online Playlists (iptv-org):",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(6.dp))
 
+                    // Group Selector Tabs (Language, Genre, Broadcast Area) - User Requirement 12
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        listOf("All", "Language", "Genre", "Region").forEach { grp ->
+                            val isSel = selectedGroup == grp
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = if (isSel) MaterialTheme.colorScheme.primary else SaCardBg,
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isSel) MaterialTheme.colorScheme.primary else Color(0xFF2E2E36)
+                                ),
+                                modifier = Modifier.clickable { selectedGroup = grp }
+                            ) {
+                                Text(
+                                    text = if (grp == "Region") "Country / Region" else grp,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSel) Color.White else Color(0xFFA1A1AA),
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
                     OutlinedTextField(
                         value = internetSearchQuery,
                         onValueChange = { internetSearchQuery = it },
-                        placeholder = { Text("Search online playlists...", fontSize = 11.sp) },
+                        placeholder = { Text("Search online playlists...", fontSize = 11.sp, color = Color.Gray) },
                         singleLine = true,
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.Gray) },
                         colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
                             focusedBorderColor = MaterialTheme.colorScheme.primary,
-                            unfocusedBorderColor = Color(0xFF2E2E36)
+                            unfocusedBorderColor = Color(0xFF2E2E36),
+                            cursorColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier
@@ -413,7 +463,21 @@ fun IptvScreen(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Column(modifier = Modifier.weight(1f)) {
-                                        Text(item.title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(item.title, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = item.group,
+                                                    fontSize = 9.sp,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
                                         Text(item.description, fontSize = 10.sp, color = Color(0xFF9E9EA7), maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
                                 }
@@ -427,6 +491,10 @@ fun IptvScreen(
                     onClick = {
                         if (newStreamOrM3uUrl.isBlank()) {
                             Toast.makeText(context, "Please enter an M3U playlist URL", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (!com.example.util.NetworkUtils.isOnline(context)) {
+                            Toast.makeText(context, "No internet connection. Please check your data or Wi-Fi.", Toast.LENGTH_LONG).show()
                             return@Button
                         }
                         val iconName = if (newFolderName.contains("news", ignoreCase = true)) "newspaper"

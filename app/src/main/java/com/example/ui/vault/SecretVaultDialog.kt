@@ -91,6 +91,8 @@ fun SecretVaultDialog(
     vaultRepository: VaultRepository,
     allAvailableMedia: List<MediaItemEntity>,
     onPlayMedia: (String) -> Unit,
+    onUnhideMedia: ((String) -> Unit)? = null,
+    onLockMedia: ((MediaItemEntity, String) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -299,7 +301,11 @@ fun SecretVaultDialog(
                                 onCreateFolderClick = { showCreateFolderDialog = true },
                                 onPlayVideo = onPlayMedia,
                                 onUnhideVideo = { videoId ->
-                                    vaultRepository.unhideVideo(videoId)
+                                    if (onUnhideMedia != null) {
+                                        onUnhideMedia(videoId)
+                                    } else {
+                                        vaultRepository.unhideVideo(videoId)
+                                    }
                                     Toast.makeText(context, "Video restored to library", Toast.LENGTH_SHORT).show()
                                 },
                                 onMoveVideoClick = { video -> videoToMove = video },
@@ -501,7 +507,11 @@ fun SecretVaultDialog(
                                         val destFolder = if (selectedVaultFolder != "All") selectedVaultFolder else "General"
                                         Button(
                                             onClick = {
-                                                vaultRepository.hideVideo(video.id, destFolder)
+                                                if (onLockMedia != null) {
+                                                    onLockMedia(video, destFolder)
+                                                } else {
+                                                    vaultRepository.hideVideo(video.id, destFolder)
+                                                }
                                                 Toast.makeText(context, "Locked to '$destFolder'", Toast.LENGTH_SHORT).show()
                                             },
                                             shape = RoundedCornerShape(8.dp),

@@ -62,9 +62,36 @@ private val AmPlayerLightColorScheme = lightColorScheme(
 fun AMPlayerTheme(
     darkTheme: Boolean = true,
     accentColor: Color = AmAccentBlue,
+    darkBgTheme: String = "OLED Black",
+    lightBgTheme: String = "Cool Gray",
     content: @Composable () -> Unit
 ) {
-    val baseScheme = if (darkTheme) AmPlayerDarkColorScheme else AmPlayerLightColorScheme
+    val darkBgColor = when (darkBgTheme) {
+        "Midnight Navy" -> Color(0xFF0A0E1A)
+        "Deep Charcoal" -> Color(0xFF121216)
+        "Cyber Slate" -> Color(0xFF161922)
+        else -> SaDarkBg // OLED Black (0xFF000000)
+    }
+
+    val lightBgColor = when (lightBgTheme) {
+        "Pure White" -> Color(0xFFFFFFFF)
+        "Warm Cream" -> Color(0xFFFDFBF7)
+        "Soft Silver" -> Color(0xFFEDEDF2)
+        else -> SaLightBg // Cool Gray (0xFFF6F8FC)
+    }
+
+    val baseScheme = if (darkTheme) {
+        AmPlayerDarkColorScheme.copy(
+            background = darkBgColor,
+            surface = darkBgColor
+        )
+    } else {
+        AmPlayerLightColorScheme.copy(
+            background = lightBgColor,
+            surface = if (lightBgColor == Color(0xFFFFFFFF)) Color(0xFFF8FAFC) else Color(0xFFFFFFFF)
+        )
+    }
+
     val colorScheme = baseScheme.copy(
         primary = accentColor
     )

@@ -3,7 +3,9 @@ package com.example.data.repository
 import android.content.ContentResolver
 import android.content.Context
 import android.database.Cursor
+import android.media.MediaScannerConnection
 import android.net.Uri
+import android.os.Environment
 import android.provider.MediaStore
 import com.example.data.local.MediaDao
 import com.example.data.model.MediaItemEntity
@@ -68,34 +70,121 @@ class MediaRepository(
 
     suspend fun hideMediaItem(item: MediaItemEntity): Boolean = withContext(Dispatchers.IO) {
         try {
-            // 1. Move/rename to hidden directory inside app's private files with a .nomedia file
-            val hiddenDir = File(context.filesDir, "vault_hidden")
-            hiddenDir.mkdirs()
-            val nomedia = File(hiddenDir, ".nomedia")
-            if (!nomedia.exists()) nomedia.createNewFile()
+            // 1. Move to app-private vault directory with .nomedia so external apps cannot scan it
+            val vaultDir = File(context.filesDir, "vault_videos").apply {
+                if (!exists()) mkdirs()
+                val nomedia = File(this, ".nomedia")
+                if (!nomedia.exists()) nomedia.createNewFile()
+            }
+
+            val cleanTitle = item.title.replace(Regex("[^a-zA-Z0-9._-]"), "_").take(50)
+            val destFile = File(vaultDir, "vault_${System.currentTimeMillis()}_$cleanTitle.mp4")
 
             val srcUri = Uri.parse(item.uri)
-            val fileName = srcUri.lastPathSegment ?: "hidden_${System.currentTimeMillis()}.mp4"
-            val targetFile = File(hiddenDir, ".hidden_$fileName")
+            var copied = false
+            try {
+                context.contentResolver.openInputStream(srcUri)?.use { input ->
+                    destFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                copied = destFile.exists() && destFile.length() > 0
+            } catch (_: Exception) {}
 
-            // Copy content into private hidden vault
-            context.contentResolver.openInputStream(srcUri)?.use { input ->
-                targetFile.outputStream().use { output ->
+            // Try direct file copy if srcUri was a file:// or direct path
+            if (!copied && srcUri.path != null) {
+                try {
+                    val srcFile = File(srcUri.path!!)
+                    if (srcFile.exists()) {
+                        srcFile.inputStream().use { input ->
+                            destFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        copied = destFile.exists() && destFile.length() > 0
+                    }
+                } catch (_: Exception) {}
+            }
+
+            // 2. Delete original from MediaStore so gallery and other apps on phone immediately stop seeing it
+            var physicalPath: String? = null
+            try {
+                if (srcUri.scheme == "content") {
+                    val proj = arrayOf(MediaStore.Video.Media.DATA)
+                    context.contentResolver.query(srcUri, proj, null, null, null)?.use { cursor ->
+                        if (cursor.moveToFirst()) {
+                            val idx = cursor.getColumnIndex(MediaStore.Video.Media.DATA)
+                            if (idx != -1) physicalPath = cursor.getString(idx)
+                        }
+                    }
+                    context.contentResolver.delete(srcUri, null, null)
+                }
+            } catch (_: Exception) {}
+
+            // If physical file path is known, try deleting it directly as well
+            if (physicalPath != null) {
+                try {
+                    val origFile = File(physicalPath!!)
+                    if (origFile.exists()) origFile.delete()
+                    MediaScannerConnection.scanFile(context, arrayOf(physicalPath!!), null, null)
+                } catch (_: Exception) {}
+            } else if (srcUri.scheme == "file" && srcUri.path != null) {
+                try {
+                    val origFile = File(srcUri.path!!)
+                    if (origFile.exists()) origFile.delete()
+                    MediaScannerConnection.scanFile(context, arrayOf(origFile.absolutePath), null, null)
+                } catch (_: Exception) {}
+            }
+
+            // 3. Update Room entity with private URI so secret vault can play it directly
+            if (copied) {
+                val updated = item.copy(
+                    uri = Uri.fromFile(destFile).toString(),
+                    folderName = "Vault"
+                )
+                mediaDao.insertOrUpdate(updated)
+            }
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    suspend fun unhideMediaItem(item: MediaItemEntity): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val srcFile = if (item.uri.startsWith("file://")) {
+                File(Uri.parse(item.uri).path ?: "")
+            } else {
+                File(item.uri)
+            }
+            if (!srcFile.exists()) return@withContext false
+
+            // Restore file back to external Movies/AMPlayer directory
+            val moviesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)
+            val destDir = File(moviesDir, "AMPlayer").apply { if (!exists()) mkdirs() }
+            val cleanTitle = item.title.replace(Regex("[^a-zA-Z0-9._-]"), "_").take(50)
+            val restoredFile = File(destDir, "$cleanTitle.mp4")
+
+            srcFile.inputStream().use { input ->
+                restoredFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
             }
 
-            // 2. Delete original from MediaStore so NO other app on the phone can see it!
-            try {
-                context.contentResolver.delete(srcUri, null, null)
-            } catch (_: Exception) {}
+            // Delete from private vault
+            srcFile.delete()
 
-            // 3. Remove from public media library
-            mediaDao.deleteByIds(listOf(item.id))
+            // Trigger MediaScanner so phone gallery sees the restored video
+            MediaScannerConnection.scanFile(context, arrayOf(restoredFile.absolutePath), null, null)
+
+            val restoredUri = Uri.fromFile(restoredFile).toString()
+            val updated = item.copy(
+                uri = restoredUri,
+                folderName = "AMPlayer"
+            )
+            mediaDao.insertOrUpdate(updated)
             true
         } catch (e: Exception) {
-            // Fallback: remove from public list
-            mediaDao.deleteByIds(listOf(item.id))
             false
         }
     }
